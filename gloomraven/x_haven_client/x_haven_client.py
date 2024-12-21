@@ -44,8 +44,7 @@ class XHavenClient:
             while True:
                 data = s.recv(CONFIG.socket_buffer_size).decode()
                 if data:
-                    game_state = self._process_server_message(data)
-                    logger.debug("Full game state: %s", game_state)
+                    self._process_server_message(data)
 
     def _process_server_message(self, message: str) -> Optional[BaseModel]:
         message = message.replace(self.MESSAGE_START, "").replace(self.MESSAGE_END, "")
@@ -68,4 +67,6 @@ class XHavenClient:
             )
 
         game_state_string = message_split[1]
-        return GameState.model_validate_json(game_state_string)
+        game_state = GameState.model_validate_json(game_state_string)
+        logger.debug("Full game state: %s", game_state)
+        return game_state

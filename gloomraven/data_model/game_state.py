@@ -1,9 +1,9 @@
-from typing import Dict, List
+from typing import Dict, List, Union
 
 from pydantic import field_validator
 
 from gloomraven.data_model.base_schema import BaseSchema
-from gloomraven.data_model.characters import Character
+from gloomraven.data_model.characters import MonsterCharacter, PlayerCharacter
 from gloomraven.data_model.decks import AbilityDeck, LootDeck, ModifierDeck
 from gloomraven.data_model.element_state import Element, ElementLevel
 
@@ -21,7 +21,7 @@ class GameState(BaseSchema):
     scenario_special_rules: List[str]
     scenario_sections_added: List[str]
     current_campaign: str
-    current_list: List[Character]
+    current_list: List[Union[PlayerCharacter, MonsterCharacter]]
     current_ability_decks: List[AbilityDeck]
     modifier_deck: ModifierDeck
     modifier_deck_allies: ModifierDeck
