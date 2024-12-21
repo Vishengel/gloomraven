@@ -1,8 +1,13 @@
+import logging
+import sys
 from typing import Dict
 
 from phue import Bridge
 
 from gloomraven.smartlight_client.smartlight_controller import SmartlightClient
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class PhilipsHueClient(SmartlightClient):
@@ -16,5 +21,5 @@ class PhilipsHueClient(SmartlightClient):
         try:
             light = self.bridge.get_light_objects("name")[light_name]
             self.bridge.set_light(light.light_id, color)
-        except KeyError:
-            print(f"Light '{light_name}' not found on the bridge.")
+        except KeyError as exc:
+            logger.error("Light '%s' not found on the Philips Hue bridge", exc)
