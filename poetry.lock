@@ -148,6 +148,17 @@ files = [
 ]
 
 [[package]]
+name = "phue"
+version = "1.1"
+description = "A Philips Hue Python library"
+category = "main"
+optional = false
+python-versions = "*"
+files = [
+    {file = "phue-1.1.tar.gz", hash = "sha256:61facc991a2ead1d727df8513d06ce089033489b6dca09be093db24f7cdb8874"},
+]
+
+[[package]]
 name = "platformdirs"
 version = "4.3.6"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."
@@ -492,4 +503,4 @@ test = ["covdefaults (>=2.3)", "coverage (>=7.2.7)", "coverage-enable-subprocess
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.13"
-content-hash = "70e6260efa4ac3754fa34f42bb948751b639535aa0bf1b82d41b06b94877bd9f"
+content-hash = "6b9e35f1b536ccaa0d4c85858b5b30a21354aa430f3f4c4f44d9f26be427e7c3"
