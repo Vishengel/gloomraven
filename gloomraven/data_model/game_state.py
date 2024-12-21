@@ -1,11 +1,11 @@
-from typing import List, Dict
-from pydantic import field_validator, ConfigDict
-from pydantic.alias_generators import to_snake, to_camel
+from typing import Dict, List
+
+from pydantic import field_validator
 
 from gloomraven.data_model.base_schema import BaseSchema
 from gloomraven.data_model.characters import Character
-from gloomraven.data_model.decks import AbilityDeck, ModifierDeck, LootDeck
-from gloomraven.data_model.element_state import Elements, ElementLevel
+from gloomraven.data_model.decks import AbilityDeck, LootDeck, ModifierDeck
+from gloomraven.data_model.element_state import ElementLevel, Elements
 
 
 class GameState(BaseSchema):
@@ -32,7 +32,9 @@ class GameState(BaseSchema):
 
     @field_validator("element_state", mode="before")
     @classmethod
-    def convert_dict_keys_and_values(cls, value: Dict[str, int]) -> Dict[Elements, ElementLevel]:
+    def convert_dict_keys_and_values(
+        cls, value: Dict[str, int]
+    ) -> Dict[Elements, ElementLevel]:
         if not isinstance(value, dict):
             raise ValueError("element_state must be a dictionary")
         try:

@@ -1,5 +1,4 @@
-from typing import List, Optional, Dict, Any
-from pydantic import BaseModel
+from typing import Any, Dict, List
 
 from gloomraven.data_model.base_schema import BaseSchema
 

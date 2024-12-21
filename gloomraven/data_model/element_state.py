@@ -2,21 +2,21 @@ from enum import Enum
 
 
 class Elements(Enum):
-    Fire = 0
-    Ice = 1
-    Air = 2
-    Earth = 3
-    Light = 4
-    Dark = 5
+    FIRE = 0
+    ICE = 1
+    AIR = 2
+    EARTH = 3
+    LIGHT = 4
+    DARK = 5
 
     def __repr__(self):
         return self.name
 
 
 class ElementLevel(Enum):
-    Full = 0
-    Half = 1
-    Inert = 2
+    FULL = 0
+    HALF = 1
+    INERT = 2
 
     def __repr__(self):
         return self.name

@@ -50,21 +50,6 @@ repos:
     hooks:
       - id: black
         args: [--safe, --quiet]
-  # Linting, see .flake8 file for config
-  - repo: https://github.com/PyCQA/flake8
-    rev: 5.0.4
-    hooks:
-      - id: flake8
-        additional_dependencies: [
-            # https://github.com/PyCQA/flake8-bugbear
-            flake8-bugbear, # Catch common pitfalls with exceptions
-            # https://github.com/gforcada/flake8-builtins
-            flake8-builtins, # No shadowing of builtins
-            # https://github.com/adamchainz/flake8-comprehensions
-            flake8-comprehensions, # Catch common pitfalls with comprehensions
-            # https://gitlab.com/RoPP/flake8-use-pathlib
-            flake8-use-pathlib, # Replace 'os' methods with pathlib
-          ]
   - repo: local
     hooks:
       - id: pylint
@@ -76,6 +61,7 @@ repos:
         args: [
             "-rn", # Only display messages
             "-sn", # Don't display the score
+            "--disable=C0114,C0115,C0116"  # Disable missing module/class docstrings
           ]
   # Static type checking
   - repo: https://github.com/pre-commit/mirrors-mypy

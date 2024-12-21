@@ -1,6 +1,5 @@
-import socket
 import json
-from enum import Enum
+import socket
 
 from gloomraven.data_model.game_state import GameState
 
