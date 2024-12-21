@@ -44,7 +44,8 @@ class XHavenClient:
             while True:
                 data = s.recv(CONFIG.socket_buffer_size).decode()
                 if data:
-                    self._process_server_message(data)
+                    game_state = self._process_server_message(data)
+                    logger.debug("Full game state: %s", game_state)
 
     def _process_server_message(self, message: str) -> Optional[BaseModel]:
         message = message.replace(self.MESSAGE_START, "").replace(self.MESSAGE_END, "")
