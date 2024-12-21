@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class Elements(Enum):
+class Element(Enum):
     FIRE = 0
     ICE = 1
     AIR = 2

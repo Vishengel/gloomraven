@@ -5,7 +5,7 @@ from pydantic import field_validator
 from gloomraven.data_model.base_schema import BaseSchema
 from gloomraven.data_model.characters import Character
 from gloomraven.data_model.decks import AbilityDeck, LootDeck, ModifierDeck
-from gloomraven.data_model.element_state import ElementLevel, Elements
+from gloomraven.data_model.element_state import Element, ElementLevel
 
 
 class GameState(BaseSchema):
@@ -28,18 +28,18 @@ class GameState(BaseSchema):
     loot_deck: LootDeck
     unlocked_classes: List[str]
     show_ally_deck: bool
-    element_state: Dict[Elements, ElementLevel]
+    element_state: Dict[Element, ElementLevel]
 
     @field_validator("element_state", mode="before")
     @classmethod
     def convert_dict_keys_and_values(
         cls, value: Dict[str, int]
-    ) -> Dict[Elements, ElementLevel]:
+    ) -> Dict[Element, ElementLevel]:
         if not isinstance(value, dict):
             raise ValueError("element_state must be a dictionary")
         try:
             return {
-                Elements(int(element)): ElementLevel(state)
+                Element(int(element)): ElementLevel(state)
                 for element, state in value.items()
             }
         except KeyError as exc:
