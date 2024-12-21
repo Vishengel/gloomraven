@@ -3,15 +3,6 @@ import socket
 
 from gloomraven.data_model.game_state import GameState
 
-ELEMENT_COLOR_MAP = {
-    "Fire": {"hue": 0, "sat": 254, "bri": 254},  # Red
-    "Ice": {"hue": 46920, "sat": 254, "bri": 254},  # Blue
-    "Earth": {"hue": 25500, "sat": 254, "bri": 254},  # Green
-    "Air": {"hue": 40000, "sat": 254, "bri": 254},  # Light blue
-    "Light": {},
-    "Dark": {},
-}
-
 
 def poll_game_server(server_ip, server_port):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
