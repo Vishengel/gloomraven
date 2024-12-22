@@ -35,8 +35,13 @@ class XHavenClient:
             logger.error("%s. Is the server port %s correct?", exc, self.server_port)
             raise
 
-    def receive_message(self, s: socket.socket) -> str:
+    def receive_data(self, s: socket.socket) -> str:
         data = s.recv(CONFIG.socket_buffer_size).decode()
+
+        while self.MESSAGE_END not in data:
+            # If the EOM marker is not in the data, we haven't received the full message yet
+            data += s.recv(CONFIG.socket_buffer_size).decode()
+
         if data:
             return data
         return ""

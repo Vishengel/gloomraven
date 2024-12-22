@@ -18,7 +18,7 @@ class GloomravenManager:
         with self.x_haven_client.connect() as connection:
             while self.running:
                 try:
-                    data = self.x_haven_client.receive_message(connection)
+                    data = self.x_haven_client.receive_data(connection)
                     if data:
                         self.x_haven_client.process_server_message(data)
                 except KeyboardInterrupt:

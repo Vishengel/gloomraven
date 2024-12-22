@@ -7,4 +7,4 @@ class BaseConfig(BaseSettings):
     log_level: int = logging.DEBUG
 
 
-BASECONFIG = BaseConfig
+BASECONFIG = BaseConfig()
