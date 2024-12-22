@@ -1,6 +1,6 @@
 import argparse
 
-from gloomraven.x_haven_client.x_haven_client import XHavenClient
+from gloomraven.gloomraven_manager import GloomravenManager
 
 
 def get_args():
@@ -19,5 +19,5 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
-    x_haven_client = XHavenClient(args.ip, args.port)
-    x_haven_client.poll_game_server()
+    gloomraven_manager = GloomravenManager(args.ip, args.port)
+    gloomraven_manager.run()

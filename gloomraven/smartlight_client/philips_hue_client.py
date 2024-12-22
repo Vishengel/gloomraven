@@ -1,13 +1,10 @@
 import logging
-import sys
 from typing import Dict
 
 from phue import Bridge
 
-from gloomraven.smartlight_client.config import CONFIG
 from gloomraven.smartlight_client.smartlight_controller import SmartlightClient
 
-logging.basicConfig(stream=sys.stdout, level=CONFIG.log_level)
 logger = logging.getLogger(__name__)
 
 

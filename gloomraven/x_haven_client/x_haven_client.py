@@ -1,6 +1,5 @@
 import logging
 import socket
-import sys
 from typing import Optional
 
 from _socket import gaierror
@@ -9,7 +8,6 @@ from pydantic import BaseModel
 from gloomraven.data_model.game_state import GameState
 from gloomraven.x_haven_client.config import CONFIG
 
-logging.basicConfig(stream=sys.stdout, level=CONFIG.log_level)
 logger = logging.getLogger(__name__)
 
 
@@ -22,31 +20,28 @@ class XHavenClient:
         self.server_ip = server_ip
         self.server_port = server_port
 
-    def poll_game_server(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            try:
-                s.connect((self.server_ip, self.server_port))
-            except gaierror as exc:
-                logger.error("%s. Is the server ip %s correct?", exc, self.server_ip)
-                raise
-            except ConnectionRefusedError as exc:
-                logger.error(
-                    "%s. Is the server port %s correct?", exc, self.server_port
-                )
-                raise
-
+    def connect(self) -> socket.socket:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.connect((self.server_ip, self.server_port))
             logger.info(
-                "Connected to server at %s:%s. Waiting for messages",
-                self.server_ip,
-                self.server_port,
+                "Connected to server at %s:%s.", self.server_ip, self.server_port
             )
+            return s
+        except gaierror as exc:
+            logger.error("%s. Is the server ip %s correct?", exc, self.server_ip)
+            raise
+        except ConnectionRefusedError as exc:
+            logger.error("%s. Is the server port %s correct?", exc, self.server_port)
+            raise
 
-            while True:
-                data = s.recv(CONFIG.socket_buffer_size).decode()
-                if data:
-                    self._process_server_message(data)
+    def receive_message(self, s: socket.socket) -> str:
+        data = s.recv(CONFIG.socket_buffer_size).decode()
+        if data:
+            return data
+        return ""
 
-    def _process_server_message(self, message: str) -> Optional[BaseModel]:
+    def process_server_message(self, message: str) -> Optional[BaseModel]:
         message = message.replace(self.MESSAGE_START, "").replace(self.MESSAGE_END, "")
         if self.GAME_STATE_START in message:
             logger.info("Received game state message from server")
