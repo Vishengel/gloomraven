@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from gloomraven.data_model.game_state import GameState
 from gloomraven.x_haven_client.config import CONFIG
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.basicConfig(stream=sys.stdout, level=CONFIG.log_level)
 logger = logging.getLogger(__name__)
 
 

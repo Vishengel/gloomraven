@@ -1,7 +1,7 @@
-from pydantic_settings import BaseSettings
+from gloomraven.config import BaseConfig
 
 
-class Config(BaseSettings):
+class Config(BaseConfig):
     socket_buffer_size: int = 8192
 
 

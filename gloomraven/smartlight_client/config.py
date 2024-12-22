@@ -1,7 +1,6 @@
 from typing import Dict
 
-from pydantic_settings import BaseSettings
-
+from gloomraven.config import BaseConfig
 from gloomraven.data_model.element_state import Element
 
 # Hardcoded from now, will be made configurable later
@@ -15,7 +14,7 @@ ELEMENT_COLOR_MAP = {
 }
 
 
-class Config(BaseSettings):
+class Config(BaseConfig):
     @property
     def element_color_map(self) -> Dict[Element, Dict[str, int]]:
         return ELEMENT_COLOR_MAP
