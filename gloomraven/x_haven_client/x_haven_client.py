@@ -46,7 +46,7 @@ class XHavenClient:
             return data
         return ""
 
-    def process_server_message(self, message: str) -> Optional[BaseModel]:
+    def process_server_message(self, message: str) -> Optional[GameState]:
         message = message.replace(self.MESSAGE_START, "").replace(self.MESSAGE_END, "")
         if self.GAME_STATE_START in message:
             logger.info("Received game state message from server")

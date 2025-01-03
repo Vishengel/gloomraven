@@ -6,7 +6,7 @@ authors = ["Jelle"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.13"
+python = "^3.11"
 pydantic = "^2.10.4"
 pre-commit = "^4.0.1"
 pylint = "^3.3.2"
