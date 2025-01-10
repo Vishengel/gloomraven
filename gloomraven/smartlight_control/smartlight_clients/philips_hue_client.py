@@ -16,7 +16,6 @@ class PhilipsHueClient(SmartlightClient):
         self.bridge_ip = bridge_ip
         self.bridge = Bridge(self.bridge_ip)
         self.bridge.connect()
-        print("s")
 
     def change_color(self, color: Dict[str, int], light_name: str) -> None:
         try:
