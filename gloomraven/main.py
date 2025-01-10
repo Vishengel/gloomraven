@@ -24,7 +24,7 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
-    x_haven_client = XHavenClient(args.ip, args.port)
-    smartlight_client = PhilipsHueClient(args.sl_ip)
+    x_haven_client = XHavenClient(args.gl_ip, args.gl_port)
+    smartlight_client = PhilipsHueClient(args.sl_ip) if args.sl_ip else None
     gloomraven_manager = GloomravenManager(x_haven_client, smartlight_client)
     gloomraven_manager.run()
