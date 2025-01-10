@@ -5,9 +5,11 @@ from typing import Dict, List
 from gloomraven.config import BASECONFIG
 from gloomraven.data_model.element_state import Element, ElementLevel
 from gloomraven.data_model.game_state import GameState
-from gloomraven.smartlight_client.config import ELEMENT_COLOR_MAP
-from gloomraven.smartlight_client.philips_hue_client import PhilipsHueClient
-from gloomraven.x_haven_client.x_haven_client import XHavenClient
+from gloomraven.gloomhaven_app_clients.x_haven_client.x_haven_client import XHavenClient
+from gloomraven.smartlight_control.smartlight_clients.config import ELEMENT_COLOR_MAP
+from gloomraven.smartlight_control.smartlight_clients.philips_hue_client import (
+    PhilipsHueClient,
+)
 
 logging.basicConfig(stream=sys.stdout, level=BASECONFIG.log_level)
 logger = logging.getLogger(__name__)
