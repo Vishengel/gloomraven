@@ -52,6 +52,8 @@ class SmartlightController:
                     hsv_for_element["bri"] // 2
                 )  # Half brightness if element is at half capacity
 
+            self.color_updates.append(hsv_for_element)
+
     def _update_lights(self):
         # This is temporary, as this just cycles through the element-based colors and immediately
         #  updates the lights for each of them.
