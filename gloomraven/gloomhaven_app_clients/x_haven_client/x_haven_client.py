@@ -34,7 +34,7 @@ class XHavenClient:
             logger.error("%s. Is the server port %s correct?", exc, self.server_port)
             raise
 
-    def receive_data(self, s: socket.socket) -> str:
+    def receive_data(self, s: socket.socket) -> Optional[GameState]:
         data = s.recv(CONFIG.socket_buffer_size).decode()
 
         while self.MESSAGE_END not in data:
@@ -42,8 +42,8 @@ class XHavenClient:
             data += s.recv(CONFIG.socket_buffer_size).decode()
 
         if data:
-            return data
-        return ""
+            return self.process_server_message(data)
+        return None
 
     def process_server_message(self, message: str) -> Optional[GameState]:
         message = message.replace(self.MESSAGE_START, "").replace(self.MESSAGE_END, "")

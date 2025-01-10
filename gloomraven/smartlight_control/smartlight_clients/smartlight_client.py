@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict
+from typing import Dict, List
 
 
 class SmartlightClient(ABC):
@@ -8,5 +8,13 @@ class SmartlightClient(ABC):
         self.bridge_ip = bridge_ip
 
     @abstractmethod
-    def change_color(self, color: Dict[str, int], light_name: str) -> None:
+    def change_color_by_light_name(
+        self, light_name: str, color: Dict[str, int]
+    ) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def change_color_by_light_ids(
+        self, light_ids: List[int], color: Dict[str, int]
+    ) -> None:
         raise NotImplementedError

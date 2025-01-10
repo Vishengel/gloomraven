@@ -18,12 +18,7 @@ def get_args():
     parser.add_argument(
         "--gl_port", help="Port of the Gloomhaven helper server", type=int, default=4567
     )
-    parser.add_argument(
-        "--sl_ip",
-        help="IP address of the smartlight bridge",
-        type=str,
-        required=True,
-    )
+    parser.add_argument("--sl_ip", help="IP address of the smartlight bridge", type=str)
     return parser.parse_args()
 
 
