@@ -19,5 +19,9 @@ class Config(BaseConfig):
     def element_color_map(self) -> Dict[Element, Dict[str, int]]:
         return ELEMENT_COLOR_MAP
 
+    @property
+    def light_transition_interval(self) -> int:
+        return 5
+
 
 CONFIG = Config()
