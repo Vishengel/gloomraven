@@ -30,3 +30,7 @@ class PhilipsHueClient(SmartlightClient):
         self, light_ids: List[int], color: Dict[str, int]
     ) -> None:
         self.bridge.set_light(light_ids, color)
+
+    def change_all_colors_in_group(self, group_id: int, color: Dict[str, int]):
+        group_dict = self.bridge.get_group(group_id)
+        self.change_color_by_light_ids([int(light_id) for light_id in group_dict["lights"] if int(light_id) != 10], color)

@@ -23,12 +23,18 @@ class SmartlightController:
     def __init__(self, smartlight_client: SmartlightClient):
         self.smartlight_client = smartlight_client
         self.current_active_elements: Dict[Element, ElementLevel] = {}
-        self.light_ids = [8, 9, 12]  # Hard coded during testing phase
+        # self.light_ids = [8, 9, 12]  # Hard coded during testing phase
+        self.group_id = 1  # Hard coded for Geke's woonkamer
 
         self.color_update_queue: Queue = Queue()
 
         # Store initial light colors here, return to this state when no elements are active or program is shutdown
-        self.original_light_state = None
+        reference_light_id = 16
+        reference_light = self.smartlight_client.bridge.get_light(reference_light_id)
+        # self.original_light_state = {"hue": reference_light["state"]["hue"], "sat": reference_light["state"]["sat"],
+        #                              "bri": reference_light["state"]["bri"]}
+        self.original_light_state = {"hue": 4453, "sat": 205,
+                                     "bri": 248}
         atexit.register(self.stop)
         signal.signal(signal.SIGINT, self._handle_signal)
         signal.signal(signal.SIGTERM, self._handle_signal)
@@ -54,6 +60,15 @@ class SmartlightController:
             for element, element_level in element_state.items()
             if element_level != ElementLevel.INERT
         }
+        if new_active_elements == {}:
+            # Clear the queue
+            while not self.color_update_queue.empty():
+                self.color_update_queue.get()
+            self.smartlight_client.change_all_colors_in_group(self.group_id, self.original_light_state)
+        #     while not self.color_update_queue.empty():
+        #         self.color_update_queue.get()
+            return
+
         if new_active_elements == self.current_active_elements:
             return
 
@@ -68,11 +83,11 @@ class SmartlightController:
                     element,
                 )
                 continue
-            hsv_for_element = ELEMENT_COLOR_MAP[element]
+            hsv_for_element = ELEMENT_COLOR_MAP[element].copy()
 
             if element_level == ElementLevel.HALF:
                 hsv_for_element["bri"] = (
-                    hsv_for_element["bri"] // 2
+                    int(0.85*hsv_for_element["bri"])
                 )  # Half brightness if element is at half capacity
 
             self.color_update_queue.put(hsv_for_element)
@@ -81,13 +96,17 @@ class SmartlightController:
         while not self._stop_event.is_set():
             if not self.color_update_queue.empty():
                 color = self.color_update_queue.get()
-                self.smartlight_client.change_color_by_light_ids(self.light_ids, color)
+                self.smartlight_client.change_all_colors_in_group(self.group_id, color)
+                self.color_update_queue.put(color)
+                time.sleep(CONFIG.light_transition_interval)
+            else:
+                self.smartlight_client.change_all_colors_in_group(self.group_id, self.original_light_state)
                 time.sleep(CONFIG.light_transition_interval)
 
     def restore_original_light_states(self):
         logger.info("Restoring original light states: %s", self.original_light_state)
-        self.smartlight_client.change_color_by_light_ids(
-            self.light_ids, self.original_light_state
+        self.smartlight_client.change_all_colors_in_group(
+            1, self.original_light_state
         )
 
     def stop(self):

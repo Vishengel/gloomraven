@@ -18,3 +18,9 @@ class SmartlightClient(ABC):
         self, light_ids: List[int], color: Dict[str, int]
     ) -> None:
         raise NotImplementedError
+
+    @abstractmethod
+    def change_all_colors_in_group(
+        self, group_id: int, color: Dict[str, int]
+    ) -> None:
+        raise NotImplementedError
