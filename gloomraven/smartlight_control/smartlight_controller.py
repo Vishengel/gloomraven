@@ -1,7 +1,6 @@
 import atexit
 import logging
 import signal
-import time
 from threading import Event, Thread
 
 from gloomraven.data_model.element_state import Element, ElementLevel
@@ -32,6 +31,7 @@ class SmartlightController:
         signal.signal(signal.SIGINT, self._handle_signal)
         signal.signal(signal.SIGTERM, self._handle_signal)
 
+        self._force_transition_event = Event()
         self._stop_event = Event()
         self._thread = Thread(target=self._light_update_loop, daemon=True)
         self._thread.start()
@@ -43,6 +43,11 @@ class SmartlightController:
         self._process_element_state(game_state.element_state)
 
     def _process_element_state(self, element_state: dict[Element, ElementLevel]):
+        """Process changes in element states and update active colors accordingly.
+
+        Args:
+            element_state: Dictionary mapping Elements to their current ElementLevel
+        """
         new_active_elements = {
             element: element_level
             for element, element_level in element_state.items()
@@ -51,6 +56,8 @@ class SmartlightController:
         logger.debug("Active colors: %s", self.active_colors)
         if new_active_elements == self.current_active_elements:
             return
+
+        removed_elements = set(self.current_active_elements.keys()) - set(new_active_elements.keys())
 
         self.current_active_elements = new_active_elements
 
@@ -72,20 +79,23 @@ class SmartlightController:
 
             self.active_colors.append(hsv_for_element)
 
+        if removed_elements:
+            logger.debug("Elements no longer active: %s", removed_elements)
+            self._force_transition_event.set()
+
     def _light_update_loop(self):
         while not self._stop_event.is_set():
             if self.active_colors:
-                # Get current color and cycle to next
                 color = self.active_colors[self.color_index]
                 self.color_index = (self.color_index + 1) % len(self.active_colors)
 
                 logger.debug("Changing color to %s (index %s)", color, self.color_index)
                 self.smartlight_client.change_color_by_light_ids(self.light_ids, color, self.transition_speed)
-                time.sleep(self.transition_interval)
             else:
-                # No active elements - reset to original and wait
                 self.restore_original_light_states()
-                time.sleep(self.transition_interval)  # Wait before checking again
+
+            self._force_transition_event.wait(timeout=self.transition_interval)
+            self._force_transition_event.clear()
 
     def restore_original_light_states(self):
         logger.info("Restoring original light state")
