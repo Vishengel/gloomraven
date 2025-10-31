@@ -53,10 +53,12 @@ class SmartlightController:
             for element, element_level in element_state.items()
             if element_level != ElementLevel.INERT
         }
-        logger.debug("Active colors: %s", self.active_colors)
         if new_active_elements == self.current_active_elements:
             return
 
+        logger.debug("Change in elements detected. Currently active elements: %s", new_active_elements)
+
+        added_elements = set(new_active_elements.keys()) - set(self.current_active_elements.keys())
         removed_elements = set(self.current_active_elements.keys()) - set(new_active_elements.keys())
 
         self.current_active_elements = new_active_elements
@@ -79,12 +81,17 @@ class SmartlightController:
 
             self.active_colors.append(hsv_for_element)
 
-        if removed_elements:
+        if added_elements or removed_elements:
             logger.debug("Elements no longer active: %s", removed_elements)
             self._force_transition_event.set()
 
     def _light_update_loop(self):
+        previous_colors = []
+
         while not self._stop_event.is_set():
+            if previous_colors == self.active_colors:
+                continue
+
             if self.active_colors:
                 color = self.active_colors[self.color_index]
                 self.color_index = (self.color_index + 1) % len(self.active_colors)
@@ -94,6 +101,7 @@ class SmartlightController:
             else:
                 self.restore_original_light_states()
 
+            previous_colors = self.active_colors.copy()
             self._force_transition_event.wait(timeout=self.transition_interval)
             self._force_transition_event.clear()
 
