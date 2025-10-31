@@ -83,16 +83,18 @@ class PhilipsWizClient(SmartlightClient):
 
     async def _change_color_async(self, light_id: int, color: dict[str, int], transition_speed: int | None = None):
         """Lil' hacky, but works for now. Will be refactored when HSV and RGB have proper data classes."""
-        if "hue" in color.keys():
+        if "hue" in color.keys() and color["hue"] is not None:
             pilot_builder = PilotBuilder(
                 hucolor=(color["hue"], color["sat"]), brightness=color["bri"], speed=transition_speed
             )
-        elif "r" in color.keys():
+        elif "r" in color.keys() and color["r"] is not None:
             pilot_builder = PilotBuilder(
                 rgb=(color["r"], color["g"], color["b"]), brightness=color["bri"], speed=transition_speed
             )
+        elif "bri" in color.keys() and color["bri"] is not None:
+            pilot_builder = PilotBuilder(brightness=color["bri"], speed=transition_speed)
         else:
-            raise ValueError("A HSV OR RGB dict must be provided")
+            raise ValueError("A HSV dict OR RGB dict OR brightness value must be provided")
 
         try:
             light = self.id_to_light_mapping[light_id]
