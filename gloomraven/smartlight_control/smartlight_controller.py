@@ -67,7 +67,13 @@ class SmartlightController:
         self.active_colors = []
         self.color_index = 0
 
-        for element, element_level in new_active_elements.items():
+        self._set_color_queue(new_active_elements)
+
+        if added_elements or removed_elements:
+            self._force_transition_event.set()
+
+    def _set_color_queue(self, active_elements: dict[Element, ElementLevel]):
+        for element, element_level in active_elements.items():
             if element not in ELEMENT_COLOR_MAP:
                 logger.error(
                     "No mapping to a HSV color is present in the element color map for element %s",
@@ -81,15 +87,12 @@ class SmartlightController:
 
             self.active_colors.append(hsv_for_element)
 
-        if added_elements or removed_elements:
-            logger.debug("Elements no longer active: %s", removed_elements)
-            self._force_transition_event.set()
-
     def _light_update_loop(self):
         previous_colors = []
 
         while not self._stop_event.is_set():
-            if previous_colors == self.active_colors:
+            if len(self.active_colors) < 2 and previous_colors == self.active_colors:
+                # We only cycle if there are multiple elements active or the set of elements has changed
                 continue
 
             if self.active_colors:
