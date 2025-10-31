@@ -18,11 +18,12 @@ class Config(BaseConfig):
 
     @property
     def light_transition_interval(self) -> int:
-        return 5
+        return 30
 
     @property
     def light_transition_speed(self) -> int:
-        return 5
+        # Currently only implemented for Philips WiZ. Value is a percentage between 20 and 200
+        return 20
 
 
 CONFIG = Config()

@@ -2,7 +2,6 @@ import atexit
 import logging
 import signal
 import time
-from queue import Queue
 from threading import Event, Thread
 
 from gloomraven.data_model.element_state import Element, ElementLevel
@@ -24,7 +23,8 @@ class SmartlightController:
         self.light_ids = self.smartlight_client.get_all_light_ids()
         self.current_active_elements: dict[Element, ElementLevel] = {}
 
-        self.color_update_queue: Queue = Queue()
+        self.active_colors: list[dict[str, int]] = []  # Store colors for cycling
+        self.color_index = 0  # Track current position in cycle
         self.transition_speed = CONFIG.light_transition_speed
         self.transition_interval = CONFIG.light_transition_interval
 
@@ -48,15 +48,15 @@ class SmartlightController:
             for element, element_level in element_state.items()
             if element_level != ElementLevel.INERT
         }
-        logger.debug("Queue: %s", self.color_update_queue.qsize())
+        logger.debug("Active colors: %s", self.active_colors)
         if new_active_elements == self.current_active_elements:
             return
 
         self.current_active_elements = new_active_elements
 
-        # Clear the queue
-        while not self.color_update_queue.empty():
-            self.color_update_queue.get()
+        # Rebuild the color cycling list
+        self.active_colors = []
+        self.color_index = 0
 
         for element, element_level in new_active_elements.items():
             if element not in ELEMENT_COLOR_MAP:
@@ -65,22 +65,27 @@ class SmartlightController:
                     element,
                 )
                 continue
-            hsv_for_element = ELEMENT_COLOR_MAP[element]
+            hsv_for_element = ELEMENT_COLOR_MAP[element].copy()  # Make a copy to avoid modifying original
 
             if element_level == ElementLevel.HALF:
-                hsv_for_element["bri"] = hsv_for_element["bri"] // 2  # Half brightness if element is at half capacity
+                hsv_for_element["bri"] = hsv_for_element["bri"] // 2
 
-            self.color_update_queue.put(hsv_for_element)
+            self.active_colors.append(hsv_for_element)
 
     def _light_update_loop(self):
         while not self._stop_event.is_set():
-            if not self.color_update_queue.empty():
-                color = self.color_update_queue.get()
-                logger.debug("Changing color to %s", color)
+            if self.active_colors:
+                # Get current color and cycle to next
+                color = self.active_colors[self.color_index]
+                self.color_index = (self.color_index + 1) % len(self.active_colors)
+
+                logger.debug("Changing color to %s (index %s)", color, self.color_index)
                 self.smartlight_client.change_color_by_light_ids(self.light_ids, color, self.transition_speed)
                 time.sleep(self.transition_interval)
             else:
+                # No active elements - reset to original and wait
                 self.restore_original_light_states()
+                time.sleep(self.transition_interval)  # Wait before checking again
 
     def restore_original_light_states(self):
         logger.info("Restoring original light state")
