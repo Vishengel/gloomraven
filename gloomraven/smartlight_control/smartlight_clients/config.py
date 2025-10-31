@@ -4,7 +4,7 @@ from gloomraven.data_model.element_state import Element
 ELEMENT_COLOR_MAP = {
     Element.FIRE: {"hue": 0, "sat": 254, "bri": 254},  # Red
     Element.ICE: {"hue": 258, "sat": 254, "bri": 254},  # Blue
-    Element.EARTH: {"hue": 140, "sat": 254, "bri": 254},  # Green
+    Element.EARTH: {"hue": 120, "sat": 254, "bri": 254},  # Green
     Element.AIR: {"hue": 220, "sat": 254, "bri": 254},  # Light blue
     Element.LIGHT: {"hue": 70, "sat": 200, "bri": 254},  # Warm yellowish-white
     Element.DARK: {"hue": 275, "sat": 254, "bri": 100},  # Deep purple
