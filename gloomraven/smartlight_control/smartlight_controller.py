@@ -62,14 +62,12 @@ class SmartlightController:
         removed_elements = set(self.current_active_elements.keys()) - set(new_active_elements.keys())
 
         self.current_active_elements = new_active_elements
+        force_transition = added_elements or self._currently_active_color_has_been_removed(removed_elements)
 
-        # Rebuild the color cycling list
-        self.active_colors = []
-        self.color_index = 0
-
+        self._reset_color_queue()
         self._set_color_queue(new_active_elements)
 
-        if added_elements or removed_elements:
+        if force_transition:
             self._force_transition_event.set()
 
     def _set_color_queue(self, active_elements: dict[Element, ElementLevel]):
@@ -86,6 +84,14 @@ class SmartlightController:
                 hsv_for_element["bri"] = hsv_for_element["bri"] // 2
 
             self.active_colors.append(hsv_for_element)
+
+    def _reset_color_queue(self):
+        self.active_colors = []
+        self.color_index = 0
+
+    def _currently_active_color_has_been_removed(self, removed_color_set: list | set):
+        current_active_color = self.active_colors[self.color_index]
+        return current_active_color in removed_color_set
 
     def _light_update_loop(self):
         previous_colors = []
