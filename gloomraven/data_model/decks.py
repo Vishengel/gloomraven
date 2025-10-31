@@ -1,4 +1,4 @@
-from typing import Any, Dict, List
+from typing import Any
 
 from gloomraven.data_model.base_schema import BaseSchema
 
@@ -10,23 +10,23 @@ class DrawPileCard(BaseSchema):
 
 class AbilityDeck(BaseSchema):
     name: str
-    draw_pile: List[DrawPileCard]
-    discard_pile: List[DrawPileCard]
+    draw_pile: list[DrawPileCard]
+    discard_pile: list[DrawPileCard]
     last_round_drawn: int
 
 
 class ModifierDeck(BaseSchema):
-    blesses: int
-    curses: int
-    enfeebles: int
+    bad_omen: int
+    corrosive_spew: bool
     added_minus_ones: int
     bad_omen: int
-    draw_pile: List[Dict[str, str]]
-    discard_pile: List[Any]
+    draw_pile: list[dict[str, str]]
+    discard_pile: list[Any]
+    removed_pile: list[Any]
 
 
 class LootDeck(BaseSchema):
-    draw_pile: List[Any]
-    discard_pile: List[Any]
-    added_cards: List[int]
-    enhancements: Dict[str, Any]
+    draw_pile: list[Any]
+    discard_pile: list[Any]
+    added_cards: list[int]
+    enhancements: dict[str, Any]

@@ -8,7 +8,7 @@ from gloomraven.smartlight_control.smartlight_clients.philips_wiz_client import 
 )
 
 
-class SupportedBrands(Enum, str):
+class SupportedBrands(str, Enum):
     HUE = "hue"
     WIZ = "wiz"
 
@@ -18,4 +18,3 @@ def smartlight_class_factory(smartlight_brand: SupportedBrands):
         return PhilipsHueClient
     if smartlight_brand == SupportedBrands.WIZ:
         return PhilipsWizClient
-    raise ValueError(f"Unsupported smartlight brand: {smartlight_brand}")
