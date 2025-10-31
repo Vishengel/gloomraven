@@ -12,6 +12,7 @@ pre-commit = "^4.0.1"
 pylint = "^3.3.2"
 pydantic-settings = "^2.7.0"
 phue = "^1.1"
+pywizlight = "^0.6.3"
 
 
 [build-system]
