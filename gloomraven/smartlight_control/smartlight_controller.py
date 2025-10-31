@@ -25,9 +25,9 @@ class SmartlightController:
         self.current_active_elements: dict[Element, ElementLevel] = {}
 
         self.color_update_queue: Queue = Queue()
+        self.transition_speed = CONFIG.light_transition_speed
+        self.transition_interval = CONFIG.light_transition_interval
 
-        # Store initial light colors here, return to this state when no elements are active or program is shutdown
-        self.original_light_state = None
         atexit.register(self.stop)
         signal.signal(signal.SIGINT, self._handle_signal)
         signal.signal(signal.SIGTERM, self._handle_signal)
@@ -52,6 +52,8 @@ class SmartlightController:
         if new_active_elements == self.current_active_elements:
             return
 
+        self.current_active_elements = new_active_elements
+
         # Clear the queue
         while not self.color_update_queue.empty():
             self.color_update_queue.get()
@@ -75,14 +77,17 @@ class SmartlightController:
             if not self.color_update_queue.empty():
                 color = self.color_update_queue.get()
                 logger.debug("Changing color to %s", color)
-                self.smartlight_client.change_color_by_light_ids(self.light_ids, color)
-                time.sleep(CONFIG.light_transition_interval)
+                self.smartlight_client.change_color_by_light_ids(self.light_ids, color, self.transition_speed)
+                time.sleep(self.transition_interval)
             else:
                 self.restore_original_light_states()
 
     def restore_original_light_states(self):
-        logger.info("Restoring original light states: %s", self.original_light_state)
-        self.smartlight_client.change_color_by_light_ids(self.light_ids, self.original_light_state)
+        logger.info("Restoring original light state")
+        try:
+            self.smartlight_client.reset_to_initial_state(transition_speed=self.transition_speed)
+        except NotImplementedError as exc:
+            logger.error("Restoring original light state not supported by client: %s", exc)
 
     def stop(self):
         self._stop_event.set()

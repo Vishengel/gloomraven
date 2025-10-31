@@ -22,6 +22,9 @@ class PhilipsHueClient(SmartlightClient):
             self.bridge_ip,
         )
 
+    def reset_to_initial_state(self) -> None:
+        super().reset_to_initial_state()
+
     def get_all_light_ids(self) -> list[int]:
         """Get all available light IDs from the Philips Hue bridge."""
         try:

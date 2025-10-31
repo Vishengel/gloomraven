@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import threading
+from typing import Any
 
 from pywizlight import PilotBuilder, discovery, wizlight
 
@@ -14,6 +15,7 @@ logging.getLogger("pywizlight").setLevel(logging.INFO)
 
 class PhilipsWizClient(SmartlightClient):
     id_to_light_mapping: dict[int, wizlight]
+    initial_states = dict[int, Any]
 
     def __init__(self):
         super().__init__()
@@ -22,6 +24,11 @@ class PhilipsWizClient(SmartlightClient):
         self._start_event_loop_thread()
         self._run_async_threadsafe(self._discover_lights_on_network())
         logger.info("Smartlight client of type %s initialized", self.__class__.__name__)
+
+    def reset_to_initial_state(self, transition_speed: int | None = None) -> None:
+        assert self.id_to_light_mapping.keys() == self.initial_states.keys()
+        for idx, state in self.initial_states.items():
+            self.change_color_by_light_ids(light_ids=[idx], color=state, transition_speed=transition_speed)
 
     def _start_event_loop_thread(self):
         """Start a dedicated thread with an event loop for async operations."""
@@ -51,6 +58,16 @@ class PhilipsWizClient(SmartlightClient):
     async def _discover_lights_on_network(self):
         lights = await discovery.discover_lights()
         self.id_to_light_mapping = dict(enumerate(lights))
+        self.initial_states = {}
+
+        for idx, light in self.id_to_light_mapping.items():
+            state = await light.updateState()
+            self.initial_states[idx] = {
+                "r": state.get_rgb()[0],
+                "g": state.get_rgb()[1],
+                "b": state.get_rgb()[2],
+                "bri": light.state.get_brightness(),
+            }
 
     def get_all_light_ids(self) -> list[int]:
         return list(self.id_to_light_mapping.keys())
@@ -64,13 +81,22 @@ class PhilipsWizClient(SmartlightClient):
 
         self._run_async_threadsafe(run_tasks())
 
-    async def _change_color_async(self, light_id: id, color: dict[str, int], transition_speed: int | None = None):
-        """Async method to change light color."""
+    async def _change_color_async(self, light_id: int, color: dict[str, int], transition_speed: int | None = None):
+        """Lil' hacky, but works for now. Will be refactored when HSV and RGB have proper data classes."""
+        if "hue" in color.keys():
+            pilot_builder = PilotBuilder(
+                hucolor=(color["hue"], color["sat"]), brightness=color["bri"], speed=transition_speed
+            )
+        elif "r" in color.keys():
+            pilot_builder = PilotBuilder(
+                rgb=(color["r"], color["g"], color["b"]), brightness=color["bri"], speed=transition_speed
+            )
+        else:
+            raise ValueError("A HSV OR RGB dict must be provided")
+
         try:
             light = self.id_to_light_mapping[light_id]
-            await light.turn_on(
-                PilotBuilder(hucolor=(color["hue"], color["sat"]), brightness=color["bri"], speed=transition_speed)
-            )
+            await light.turn_on(pilot_builder)
         except Exception as exc:
             logger.error("Failed to change color for WiZ light at %s: %s", light_id, exc)
 

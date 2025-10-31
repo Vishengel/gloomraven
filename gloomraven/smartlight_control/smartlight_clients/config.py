@@ -20,5 +20,9 @@ class Config(BaseConfig):
     def light_transition_interval(self) -> int:
         return 5
 
+    @property
+    def light_transition_speed(self) -> int:
+        return 5
+
 
 CONFIG = Config()
