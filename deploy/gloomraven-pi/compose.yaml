@@ -1,0 +1,17 @@
+services:
+  gloomraven:
+    build: ../..
+    image: gloomraven
+    container_name: gloomraven
+    # WiZ discovery broadcasts on the LAN, which a bridge network can't reach.
+    # It also puts the X-Haven server, published on the Pi's port 4567, on 127.0.0.1
+    network_mode: host
+    env_file: ../../.env
+    # For Hue: --sl_type hue --sl_ip <bridge ip>
+    command: ["--gl_ip", "127.0.0.1", "--sl_type", "wiz"]
+    volumes:
+      - gloomraven-data:/data
+    restart: unless-stopped
+
+volumes:
+  gloomraven-data:
