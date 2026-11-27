@@ -1,6 +1,6 @@
 import logging
 
-from phue import Bridge
+from phue import Bridge, PhueException
 
 from gloomraven.smartlight_control.smartlight_clients.config import CONFIG
 from gloomraven.smartlight_control.smartlight_clients.smartlight_client import (
@@ -31,7 +31,7 @@ class PhilipsHueClient(SmartlightClient):
         """Get the IDs of the configured lights, or of all lights if none are configured."""
         try:
             name_to_light = self.bridge.get_light_objects("name")
-        except Exception as exc:
+        except (PhueException, OSError) as exc:
             logger.error("Failed to get lights from Philips Hue bridge: %s", exc)
             return []
 

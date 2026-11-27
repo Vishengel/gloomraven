@@ -4,6 +4,7 @@ import threading
 from typing import Any
 
 from pywizlight import PilotBuilder, discovery, wizlight
+from pywizlight.exceptions import WizLightError
 
 from gloomraven.smartlight_control.smartlight_clients.config import CONFIG
 from gloomraven.smartlight_control.smartlight_clients.smartlight_client import (
@@ -118,29 +119,8 @@ class PhilipsWizClient(SmartlightClient):
         else:
             raise ValueError("A HSV dict OR RGB dict OR brightness value must be provided")
 
+        light = self.id_to_light_mapping[light_id]
         try:
-            light = self.id_to_light_mapping[light_id]
             await light.turn_on(pilot_builder)
-        except Exception as exc:
-            logger.error("Failed to change color for WiZ light at %s: %s", light_id, exc)
-
-    def add_light(self, name: str, ip: str):
-        """Add a WiZ light to the known lights dictionary."""
-        self.lights[name] = ip
-        logger.info("Added WiZ light '%s' at IP %s", name, ip)
-
-    async def turn_on_light(self, light_ip: str):
-        """Turn on a WiZ light."""
-        try:
-            light = wizlight(light_ip)
-            await light.turn_on()
-        except Exception as exc:
-            logger.error("Failed to turn on WiZ light at %s: %s", light_ip, exc)
-
-    async def turn_off_light(self, light_ip: str):
-        """Turn off a WiZ light."""
-        try:
-            light = wizlight(light_ip)
-            await light.turn_off()
-        except Exception as exc:
-            logger.error("Failed to turn off WiZ light at %s: %s", light_ip, exc)
+        except WizLightError as exc:
+            logger.error("Failed to change color for WiZ light at %s: %s", light.ip, exc)
