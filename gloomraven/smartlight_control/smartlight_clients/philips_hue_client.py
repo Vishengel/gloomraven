@@ -10,8 +10,18 @@ from gloomraven.smartlight_control.smartlight_clients.smartlight_client import (
 
 logger = logging.getLogger(__name__)
 
+HUE_MAX = 65535  # The bridge's hue range is 0-65535, where 65535 is red again
+
 # The state fields that set the light's colour, for each colour mode the bridge reports
 COLOR_MODE_FIELDS = {"hs": ("hue", "sat"), "ct": ("ct",), "xy": ("xy",)}
+
+
+def _get_hue_params_for_color(color: dict[str, int]) -> dict[str, Any]:
+    """Convert a color from the element color map (hue in degrees, 0-360) to the bridge's hue range (0-65535)."""
+    params: dict[str, Any] = {"on": True} | color  # A light has to be on to change its color
+    if "hue" in color:
+        params["hue"] = round(color["hue"] / 360 * HUE_MAX) % (HUE_MAX + 1)
+    return params
 
 
 def _get_state_params_to_restore(state: dict[str, Any]) -> dict[str, Any]:
@@ -69,19 +79,14 @@ class PhilipsHueClient(SmartlightClient):
     def list_available_lights(self) -> list[str]:
         return [f"{name} (id {light.light_id})" for name, light in self.bridge.get_light_objects("name").items()]
 
-    def _set_light(self, light_ids: list[int], color: dict[str, int]):
-        if "hue" in color:
-            color["hue"] = int(color["hue"] / 360) * 65535
-        self.bridge.set_light(light_ids, color)
-
     def change_color_by_light_ids(
         self, light_ids: list[int], color: dict[str, int], transition_speed: int | None = None
     ) -> None:
-        self.bridge.set_light(light_ids, color)
+        self.bridge.set_light(light_ids, _get_hue_params_for_color(color))
 
     def change_color_by_light_name(self, light_name: str, color: dict[str, int]) -> None:
         try:
             light = self.bridge.get_light_objects("name")[light_name]
-            self.bridge.set_light(light.light_id, color)
+            self.bridge.set_light(light.light_id, _get_hue_params_for_color(color))
         except KeyError as exc:
             logger.error("Light '%s' not found on the Philips Hue bridge", exc)
