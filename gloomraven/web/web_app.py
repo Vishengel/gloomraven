@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 from threading import Thread
+from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -9,6 +10,7 @@ from pydantic import BaseModel, Field
 
 from gloomraven.data_model.element_state import ElementLevel
 from gloomraven.gloomraven_manager import GloomravenManager
+from gloomraven.settings import Settings, SettingsStore
 from gloomraven.smartlight_control.light_selection_store import LightSelectionStore
 from gloomraven.smartlight_control.smartlight_clients.smartlight_client import AvailableLight
 from gloomraven.smartlight_control.smartlight_clients.smartlight_types import SupportedBrands
@@ -38,6 +40,11 @@ class Lights(BaseModel):
 class LightSelectionRequest(BaseModel):
     # At least one: an empty selection means all lights, which is not what unchecking everything suggests
     light_keys: list[str] = Field(min_length=1)
+
+
+class SettingsResponse(BaseModel):
+    values: Settings
+    json_schema: dict[str, Any]  # The web UI builds its settings form from this
 
 
 class PulseRequest(BaseModel):
@@ -75,6 +82,7 @@ def create_app(
     manager: GloomravenManager,
     brand: SupportedBrands,
     light_selection_store: LightSelectionStore,
+    settings_store: SettingsStore,
 ) -> FastAPI:
     app = FastAPI(title="Gloomraven")
 
@@ -116,6 +124,17 @@ def create_app(
     def pulse_lights(request: PulseRequest) -> None:
         _get_controller(manager).pulse_lights(request.light_keys)
 
+    @app.get("/api/settings")
+    def get_settings() -> SettingsResponse:
+        return SettingsResponse(values=settings_store.load(), json_schema=Settings.model_json_schema())
+
+    @app.put("/api/settings")
+    def save_settings(settings: Settings) -> SettingsResponse:
+        settings_store.save(settings)
+        if manager.smartlight_controller:
+            manager.smartlight_controller.apply_settings(settings)
+        return get_settings()
+
     @app.post("/api/lights/rediscover")
     def rediscover_lights() -> Lights:
         _get_controller(manager).rediscover_lights()
@@ -128,11 +147,12 @@ def start_web_server(
     manager: GloomravenManager,
     brand: SupportedBrands,
     light_selection_store: LightSelectionStore,
+    settings_store: SettingsStore,
 ) -> None:
     """Serve the web UI from a background thread, so the main thread keeps handling Ctrl+C and SIGTERM."""
     # No access log: every open page polls the status every few seconds
     uvicorn_config = uvicorn.Config(
-        create_app(manager, brand, light_selection_store),
+        create_app(manager, brand, light_selection_store, settings_store),
         host=CONFIG.web_host,
         port=CONFIG.web_port,
         access_log=False,

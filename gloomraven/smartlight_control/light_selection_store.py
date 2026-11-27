@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, ValidationError
 
 from gloomraven.smartlight_control.smartlight_clients.config import CONFIG
 from gloomraven.smartlight_control.smartlight_clients.smartlight_types import SupportedBrands
+from gloomraven.util import write_text_atomically
 
 logger = logging.getLogger(__name__)
 
@@ -53,11 +54,7 @@ class LightSelectionStore:
             self._write(selection)
 
     def _write(self, selection: LightSelection) -> None:
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        # Write to a temporary file first, so a crash halfway never leaves a corrupt selection behind
-        temporary_path = self.path.with_suffix(".tmp")
-        temporary_path.write_text(selection.model_dump_json(indent=2), encoding="utf-8")
-        temporary_path.replace(self.path)
+        write_text_atomically(self.path, selection.model_dump_json(indent=2))
 
     def _read(self) -> LightSelection | None:
         if not self.path.exists():

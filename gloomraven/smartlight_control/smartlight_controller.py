@@ -6,6 +6,7 @@ from typing import Self
 
 from gloomraven.data_model.element_state import Element, ElementLevel
 from gloomraven.data_model.game_state import GameState
+from gloomraven.settings import Settings
 from gloomraven.smartlight_control.smartlight_clients.config import (
     CONFIG,
     ELEMENT_COLOR_MAP,
@@ -35,7 +36,7 @@ class SmartlightController:
         self.color_index = 0  # Position of the next color to show
         self.shown_element: Element | None = None
         self.transition_speed = CONFIG.light_transition_speed
-        self.transition_interval = CONFIG.light_transition_interval
+        self.element_cycle_interval = Settings().element_cycle_interval  # Seconds
 
         self._force_transition_event = Event()
         # Held while talking to the lights, so a change of lights from the web UI never interleaves with a color change
@@ -58,6 +59,9 @@ class SmartlightController:
 
     def update(self, game_state: GameState):
         self._process_element_state(game_state.element_state)
+
+    def apply_settings(self, settings: Settings) -> None:
+        self.element_cycle_interval = settings.element_cycle_interval
 
     def select_lights(self, light_keys: list[str]) -> None:
         """Control other lights from now on. The lights that are dropped get their own state back."""
@@ -126,7 +130,7 @@ class SmartlightController:
                     self._show_next_color(active_colors)
                 shown_colors = active_colors
 
-            self._force_transition_event.wait(timeout=self.transition_interval)
+            self._force_transition_event.wait(timeout=self.element_cycle_interval)
             self._force_transition_event.clear()
 
     def _show_next_color(self, active_colors: list[tuple[Element, dict[str, int]]]):

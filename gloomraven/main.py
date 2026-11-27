@@ -5,6 +5,7 @@ import sys
 
 from gloomraven.gloomhaven_app_clients.x_haven_client.x_haven_client import XHavenClient
 from gloomraven.gloomraven_manager import GloomravenManager
+from gloomraven.settings import SettingsStore
 from gloomraven.smartlight_control.light_selection_store import LightSelectionStore
 from gloomraven.smartlight_control.smartlight_clients.smartlight_types import (
     SupportedBrands,
@@ -61,7 +62,10 @@ if __name__ == "__main__":
 
     x_haven_client = XHavenClient(args.gl_ip, args.gl_port)
     gloomraven_manager = GloomravenManager(x_haven_client, smartlight_client)
-    start_web_server(gloomraven_manager, args.sl_type, light_selection_store)
+    settings_store = SettingsStore()
+    if gloomraven_manager.smartlight_controller:
+        gloomraven_manager.smartlight_controller.apply_settings(settings_store.load())
+    start_web_server(gloomraven_manager, args.sl_type, light_selection_store, settings_store)
     signal.signal(signal.SIGTERM, _exit_on_sigterm)
     try:
         gloomraven_manager.run()

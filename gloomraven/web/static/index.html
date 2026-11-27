@@ -34,7 +34,10 @@
     button { flex: 1; padding: 10px; border: 0; border-radius: 8px; font: inherit; background: var(--accent); color: #fff; cursor: pointer; }
     button.secondary { background: #3a3442; }
     button:disabled { opacity: 0.4; cursor: default; }
-    #lights-message { margin-top: 8px; font-size: 0.9rem; }
+    #lights-message, #settings-message { margin-top: 8px; font-size: 0.9rem; }
+    .setting { display: grid; gap: 4px; padding: 6px 0; }
+    .setting-header { display: flex; justify-content: space-between; gap: 8px; }
+    .setting input[type=range] { width: 100%; accent-color: var(--accent); }
   </style>
 </head>
 <body>
@@ -66,6 +69,11 @@
       <button id="cancel-rename" class="secondary">Cancel</button>
     </div>
     <div id="lights-message" class="muted"></div>
+  </section>
+  <section>
+    <h2>Settings</h2>
+    <div id="settings"></div>
+    <div id="settings-message" class="muted"></div>
   </section>
 </main>
 <script>
@@ -266,8 +274,52 @@
     callLightsApi("PUT", "/api/lights/names", { names });
   });
 
+  // Settings: one slider per integer setting with a minimum and maximum, built from the settings' JSON schema
+
+  function settingSlider(key, field, value, values) {
+    const unit = field.unit ?? "";
+    const output = element("output", { textContent: `${value} ${unit}` });
+    const slider = element("input", {
+      type: "range", id: `setting-${key}`, min: field.minimum, max: field.maximum, value,
+    });
+    slider.addEventListener("input", () => (output.textContent = `${slider.value} ${unit}`));
+    // Saved when the slider is let go, not on every step
+    slider.addEventListener("change", () => saveSettings({ ...values, [key]: Number(slider.value) }));
+    return element("div", { className: "setting" }, [
+      element("div", { className: "setting-header" }, [element("label", { htmlFor: slider.id, textContent: field.title }), output]),
+      slider,
+      element("div", { className: "muted detail", textContent: field.description ?? "" }),
+    ]);
+  }
+
+  function renderSettings({ values, json_schema }) {
+    const sliders = Object.entries(json_schema.properties)
+      .filter(([, field]) => field.type === "integer" && "minimum" in field && "maximum" in field)
+      .map(([key, field]) => settingSlider(key, field, values[key], values));
+    byId("settings").replaceChildren(...sliders);
+  }
+
+  async function callSettingsApi(method, values) {
+    try {
+      const response = await fetch("/api/settings", {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: values && JSON.stringify(values),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(typeof result.detail === "string" ? result.detail : response.statusText);
+      renderSettings(result);
+      byId("settings-message").textContent = method === "GET" ? "" : "Saved";
+    } catch (error) {
+      byId("settings-message").textContent = `Failed: ${error.message}`;
+    }
+  }
+
+  const saveSettings = (values) => callSettingsApi("PUT", values);
+
   refresh();
   setInterval(refresh, 2000);
+  callSettingsApi("GET");
   callLightsApi("GET", "/api/lights");
 </script>
 </body>

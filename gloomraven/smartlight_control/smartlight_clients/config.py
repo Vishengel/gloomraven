@@ -29,10 +29,6 @@ class Config(BaseConfig):
         return ELEMENT_COLOR_MAP
 
     @property
-    def light_transition_interval(self) -> int:
-        return 30
-
-    @property
     def light_transition_speed(self) -> int:
         # Currently only implemented for Philips WiZ. Value is a percentage between 20 and 200
         return 20

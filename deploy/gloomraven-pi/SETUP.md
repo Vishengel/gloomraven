@@ -42,6 +42,9 @@ To go back to an earlier build, replace `latest` in `compose.yaml` with that com
 
 - The container uses the host network: WiZ discovery broadcasts on the LAN, which a bridge network can't reach.
   It also makes the X-Haven server reachable on `127.0.0.1:4567`.
+- What you set in the web UI (light selection, names, settings) is saved in the `gloomraven_gloomraven-data`
+  volume, as `light_selection.json` and `settings.json`. It survives updates and reboots; only
+  `docker compose down -v` deletes it.
 - `docker compose stop` restores the lights to how they were before the game.
 - To see which lights are found, outside the web UI: `docker compose stop`, then
   `docker compose run --rm gloomraven --list_lights --sl_type wiz`. Both use WiZ's UDP port, so not at the same time.

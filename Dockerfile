@@ -21,7 +21,8 @@ RUN uv sync --locked --no-dev
 RUN useradd --system --home-dir /data --create-home gloomraven
 USER gloomraven
 ENV HOME=/data \
-    LIGHT_SELECTION_PATH=/data/light_selection.json
+    LIGHT_SELECTION_PATH=/data/light_selection.json \
+    SETTINGS_PATH=/data/settings.json
 VOLUME /data
 
 ENTRYPOINT ["python", "-m", "gloomraven.main"]
