@@ -31,14 +31,14 @@ an address outside the router's DHCP range so nothing else gets it.)
 
 ## 2. Start the server
 
-```bash
-mkdir -p ~/x-haven && cd ~/x-haven
-# copy compose.yaml here
-docker compose up -d
-docker compose logs -f     # expect "Starting Server" / "Server Online"
-```
+With [Dockge](https://github.com/louislam/dockge) (`http://<pi ip>:5001`, also as an Android app): **+ Compose**,
+name it `x-haven`, paste this folder's `compose.yaml` and **Deploy**. Dockge keeps it in `/opt/stacks/x-haven/`.
+The log should show "Starting Server" / "Server Online".
 
-`restart: unless-stopped` brings it back after a reboot.
+By hand instead: put `compose.yaml` in `/opt/stacks/x-haven/` and run `docker compose up -d` there.
+
+`restart: unless-stopped` brings it back after a reboot. Between campaigns you can stop the stack in Dockge and
+start it again before the next session.
 
 Quick check from another machine on the wifi:
 ```bash
@@ -54,10 +54,8 @@ The first device to connect pushes its game state; others then sync.
 ## 4. Updating
 
 All players' apps must speak the same protocol as the server. When the app
-updates, bump the tag in `compose.yaml` to the same version and run:
-```bash
-docker compose pull && docker compose up -d
-```
+updates, bump the tag in `compose.yaml` to the same version (edit the stack in Dockge) and **Update**, or run
+`docker compose pull && docker compose up -d` in `/opt/stacks/x-haven`.
 
 ## Things to know
 
@@ -65,5 +63,4 @@ docker compose pull && docker compose up -d
   forgets it, but the apps keep their own copy and the next action re-syncs.
 - The server log shows an IPv6 address as "connect to" IP; ignore it and use
   the Pi's reserved IPv4 address.
-- gloomraven connects the same way:
-  `python -m gloomraven.main --gl_ip 192.168.1.50 ...` (port defaults to 4567).
+- gloomraven runs on the same Pi and connects to `127.0.0.1:4567`; see `../gloomraven-pi/SETUP.md`.
