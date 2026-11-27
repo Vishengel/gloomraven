@@ -38,7 +38,7 @@
     header { display: flex; align-items: center; gap: 12px; padding: 4px 2px 0; }
     header svg { width: 44px; height: 44px; flex: none; fill: #050406; stroke: var(--bronze-dim); stroke-width: 1; }
     h1 { margin: 0; font: 600 1.7rem/1.1 var(--serif); letter-spacing: 0.04em; color: var(--bronze); }
-    .tagline { margin: 2px 0 0; font: italic 0.9rem var(--serif); color: var(--muted); }
+    header svg .legs { fill: none; stroke-width: 1.6; stroke-linecap: round; }
     .element-rule {
       height: 2px; border-radius: 2px; opacity: 0.7;
       background: linear-gradient(90deg, var(--fire), var(--light), var(--earth), var(--air), var(--ice), var(--dark));
@@ -106,8 +106,50 @@
     button:hover:not(:disabled) { filter: brightness(1.12); }
     button:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
     button:disabled { opacity: 0.4; cursor: default; }
-    button.pulse { flex: none; padding: 4px 10px; font-size: 0.8rem; }
-    #lights-message, #settings-message { margin-top: 8px; font-size: 0.9rem; }
+    button.pulse {
+      flex: none; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border-radius: 50%;
+    }
+    button.pulse svg { width: 20px; height: 20px; fill: none; stroke: var(--bronze); stroke-width: 1.6; }
+    button.pulse.pulsing svg { animation: ripple 0.8s ease-out infinite; }
+    @keyframes ripple { from { transform: scale(0.7); opacity: 1; } to { transform: scale(1.15); opacity: 0.3; } }
+    button.link {
+      flex: none; padding: 6px 0; border: 0; background: none; color: var(--bronze);
+      font: inherit; letter-spacing: 0; text-decoration: underline; text-underline-offset: 3px;
+    }
+    .link-row { display: flex; flex-wrap: wrap; gap: 4px 20px; }
+    #lights-message, #settings-message { margin-top: 6px; min-height: 1.2em; }
+    #name-hint { margin: 0 0 4px; }
+
+    /* Bottom tab bar: within thumb reach on a phone */
+    body { padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+    .tabs {
+      position: fixed; inset: auto 0 0 0; z-index: 2; display: flex; justify-content: center; gap: 8px;
+      padding: 6px 16px calc(6px + env(safe-area-inset-bottom));
+      background: rgb(14 12 16 / 0.92); backdrop-filter: blur(8px); border-top: 1px solid var(--card-edge);
+    }
+    .tabs a {
+      flex: 1; max-width: 220px; display: grid; justify-items: center; gap: 2px; padding: 6px; border-radius: 8px;
+      font: 600 0.8rem var(--serif); letter-spacing: 0.1em; text-transform: uppercase; text-decoration: none;
+      color: var(--muted);
+    }
+    .tabs a svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+    .tabs a[aria-current=page] { color: var(--bronze); background: rgb(195 154 91 / 0.08); }
+    .tabs a:focus-visible { outline: 2px solid var(--bronze); }
+    .view { display: grid; gap: 14px; }
+
+    /* Unsaved light selection: sticks to the bottom of the screen, above the tab bar */
+    #save-bar {
+      position: sticky; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 1;
+      display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 12px;
+      background: #241d16; border: 1px solid var(--bronze-dim); box-shadow: 0 8px 24px rgb(0 0 0 / 0.5);
+    }
+    #save-bar-text { flex: 1; color: var(--bronze); font-weight: 600; }
+    #save-bar button { flex: none; padding: 8px 16px; }
+
+    /* The table view is glanced at during play, so the elements are big */
+    #view-table .element { padding: 10px 18px; font-size: 1.2rem; }
+    #view-table #elements { gap: 12px; min-height: 3rem; align-items: center; }
+    #lights { margin-top: 10px; }
 
     .setting { display: grid; gap: 4px; padding: 6px 0; }
     .setting-header { display: flex; justify-content: space-between; gap: 8px; }
@@ -118,47 +160,70 @@
 <body>
 <main>
   <header>
-    <!-- An original low-poly raven -->
+    <!-- An original raven silhouette -->
     <svg viewBox="0 0 64 64" aria-hidden="true">
-      <path d="M3 27 17 21 23 13 33 10 41 15 43 24 56 33 62 46 50 42 43 50 31 51 22 43 19 33 15 29Z"/>
-      <circle cx="31" cy="17" r="1.8" fill="var(--bronze)" stroke="none"/>
+      <path d="M3 23 16 17.5C18 12 25 9.5 30 11.5 33 12.5 35 14 36 16 44 19 51 27 55 35L63 50 57 51.5 52 46C46 49 37 49.5 31 45.5 25 41.5 21 34 20.5 28.5L15 25Z"/>
+      <path class="legs" d="M35 48 34 57M41 48 42 57M31 57H37M39 57H45"/>
+      <circle cx="24" cy="16.5" r="1.8" fill="var(--bronze)" stroke="none"/>
     </svg>
-    <div>
-      <h1>Gloomraven</h1>
-      <p class="tagline">The elements, in the lights of the room</p>
-    </div>
+    <h1>Gloomraven</h1>
   </header>
   <div class="element-rule"></div>
-  <section>
-    <h2>The table</h2>
-    <div id="connection" class="status-line muted"><span class="dot"></span><span>Loading…</span></div>
-    <div id="scenario" class="status-line muted">–</div>
-  </section>
-  <section>
-    <h2>Active elements</h2>
-    <div id="elements" class="muted">–</div>
-  </section>
-  <section>
-    <h2>Lights</h2>
-    <div id="lights" class="muted">–</div>
-    <div id="light-tree"></div>
-    <div class="buttons" id="select-buttons">
-      <button id="save-lights" disabled>Save</button>
-      <button id="rename" class="secondary">Rename</button>
-      <button id="rediscover-lights" class="secondary">Search again</button>
+
+  <div id="view-table" class="view">
+    <section>
+      <h2>The table</h2>
+      <div id="connection" class="status-line muted"><span class="dot"></span><span>Loading…</span></div>
+      <div id="scenario" class="status-line muted">–</div>
+    </section>
+    <section>
+      <h2>Active elements</h2>
+      <div id="elements" class="muted">–</div>
+      <div id="lights" class="muted detail"></div>
+    </section>
+  </div>
+
+  <div id="view-setup" class="view" hidden>
+    <section>
+      <h2>Lights</h2>
+      <p id="name-hint" class="muted detail" hidden>
+        Lights only show their MAC address until you name them.
+        <button id="name-hint-rename" class="link">Name them</button>
+      </p>
+      <div id="light-tree"></div>
+      <div class="buttons" id="rename-buttons" hidden>
+        <button id="save-names">Save names</button>
+        <button id="cancel-rename" class="secondary">Cancel</button>
+      </div>
+      <div class="link-row" id="light-links">
+        <button id="rename" class="link">Rename</button>
+        <button id="rediscover-lights" class="link">Search again for lights</button>
+      </div>
+      <div id="lights-message" class="muted detail" role="status"></div>
+    </section>
+    <section>
+      <h2>Settings</h2>
+      <div id="settings"></div>
+      <div id="settings-message" class="muted detail" role="status"></div>
+    </section>
+    <!-- Only shown while the light selection has unsaved changes -->
+    <div id="save-bar" hidden>
+      <span id="save-bar-text"></span>
+      <button id="undo-lights" class="secondary">Undo</button>
+      <button id="save-lights">Save</button>
     </div>
-    <div class="buttons" id="rename-buttons" hidden>
-      <button id="save-names">Save names</button>
-      <button id="cancel-rename" class="secondary">Cancel</button>
-    </div>
-    <div id="lights-message" class="muted"></div>
-  </section>
-  <section>
-    <h2>Settings</h2>
-    <div id="settings"></div>
-    <div id="settings-message" class="muted"></div>
-  </section>
+  </div>
 </main>
+<nav class="tabs" aria-label="Views">
+  <a href="#table" data-view="table">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c2 3 5 5 5 9a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 0-3-1-5 1-8z"/></svg>
+    Table
+  </a>
+  <a href="#setup" data-view="setup">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg>
+    Setup
+  </a>
+</nav>
 <script>
   const byId = (id) => document.getElementById(id);
 
@@ -189,7 +254,7 @@
     const strongest = elements.find(([, level]) => level === "FULL") ?? elements[0];
     document.body.dataset.element = strongest ? strongest[0] : "";
 
-    byId("lights").textContent = `Controlling ${status.n_controlled_lights} lights`;
+    byId("lights").textContent = `${status.n_controlled_lights} lights follow the elements`;
   }
 
   async function refresh() {
@@ -238,11 +303,18 @@
     return element("div", { className: "line" }, [label, pulseButton([light.key], lights.names[light.key] ?? light.key)]);
   }
 
+  const RIPPLE_ICON =
+    '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="2.5"/><circle cx="12" cy="12" r="6"/>' +
+    '<circle cx="12" cy="12" r="9.5" opacity="0.5"/></svg>';
+
   function pulseButton(lightKeys, name) {
-    const button = element("button", { className: "secondary pulse", textContent: "Pulse", ariaLabel: `Pulse ${name}` });
+    const button = element("button", { className: "secondary pulse", title: `Pulse ${name}` });
+    button.setAttribute("aria-label", `Pulse ${name}`);
+    button.innerHTML = RIPPLE_ICON;
     button.hidden = renaming;
     button.addEventListener("click", async () => {
       button.disabled = true;
+      button.classList.add("pulsing");
       try {
         const response = await fetch("/api/lights/pulse", {
           method: "POST",
@@ -254,6 +326,7 @@
         byId("lights-message").textContent = `Pulse failed: ${error.message}`;
       } finally {
         button.disabled = false;
+        button.classList.remove("pulsing");
       }
     });
     return button;
@@ -295,8 +368,9 @@
       blocks.push(...(groups.get(null) ?? []).map(lightRow));
     }
     byId("light-tree").replaceChildren(...blocks);
-    byId("select-buttons").hidden = renaming;
+    byId("light-links").hidden = renaming;
     byId("rename-buttons").hidden = !renaming;
+    byId("name-hint").hidden = renaming || !lights.lights.length || Object.keys(lights.names).length > 0;
     byId("light-tree").querySelectorAll("input[type=checkbox]").forEach((checkbox) => (checkbox.disabled = renaming));
     updateSelectionState();
   }
@@ -311,14 +385,22 @@
     }
     const keys = checkedKeys();
     const savedKeys = lights.lights.filter((light) => light.selected).map((light) => light.key);
-    const unchanged = keys.length === savedKeys.length && keys.every((key) => savedKeys.includes(key));
-    byId("save-lights").disabled = !keys.length || unchanged;
-    byId("rename").disabled = !unchanged;  // Renaming redraws the list, which would lose unsaved ticks
-    byId("lights-message").textContent = keys.length ? "" : "Pick at least one light";
+    const nChanges = keys.filter((key) => !savedKeys.includes(key)).length +
+      savedKeys.filter((key) => !keys.includes(key)).length;
+    byId("save-bar").hidden = nChanges === 0;
+    byId("save-bar-text").textContent = keys.length
+      ? `${nChanges} unsaved ${nChanges === 1 ? "change" : "changes"}`
+      : "Pick at least one light";
+    byId("save-lights").disabled = !keys.length;
+    // Renaming redraws the list, which would lose unsaved ticks
+    byId("rename").disabled = nChanges > 0;
+    byId("name-hint-rename").disabled = nChanges > 0;
   }
 
+  const hasUnsavedLights = () => !byId("save-bar").hidden;
+
   async function callLightsApi(method, path, body) {
-    const buttons = [...document.querySelectorAll("#select-buttons button, #rename-buttons button")];
+    const buttons = [...document.querySelectorAll("#light-links button, #rename-buttons button, #save-bar button")];
     buttons.forEach((button) => (button.disabled = true));
     byId("lights-message").textContent = method === "GET" ? "" : "Working on it…";
     try {
@@ -336,7 +418,8 @@
     } catch (error) {
       byId("lights-message").textContent = `Failed: ${error.message}`;
     } finally {
-      buttons.filter((button) => button.id !== "save-lights").forEach((button) => (button.disabled = false));
+      buttons.forEach((button) => (button.disabled = false));
+      updateSelectionState();
     }
   }
 
@@ -344,10 +427,13 @@
     callLightsApi("PUT", "/api/lights", { light_keys: checkedKeys() }));
   byId("rediscover-lights").addEventListener("click", () =>
     callLightsApi("POST", "/api/lights/rediscover"));
-  byId("rename").addEventListener("click", () => {
+  const startRenaming = () => {
     renaming = true;
     renderLights();
-  });
+  };
+  byId("rename").addEventListener("click", startRenaming);
+  byId("name-hint-rename").addEventListener("click", startRenaming);
+  byId("undo-lights").addEventListener("click", renderLights);
   byId("cancel-rename").addEventListener("click", () => {
     renaming = false;
     renderLights();
@@ -402,6 +488,33 @@
   }
 
   const saveSettings = (values) => callSettingsApi("PUT", values);
+
+  // Views, kept in the URL hash so the back button and a bookmark work
+
+  let currentView = "table";
+
+  function showView() {
+    const view = location.hash === "#setup" ? "setup" : "table";
+    if (currentView === "setup" && view !== "setup" && hasUnsavedLights() &&
+        !confirm("The light selection has unsaved changes. Leave without saving?")) {
+      history.replaceState(null, "", "#setup");
+      return;
+    }
+    if (view !== "setup" && hasUnsavedLights()) renderLights();  // Drop the changes that were left behind
+    currentView = view;
+    byId("view-table").hidden = view !== "table";
+    byId("view-setup").hidden = view !== "setup";
+    for (const link of document.querySelectorAll(".tabs a")) {
+      if (link.dataset.view === view) link.setAttribute("aria-current", "page");
+      else link.removeAttribute("aria-current");
+    }
+  }
+
+  window.addEventListener("hashchange", showView);
+  window.addEventListener("beforeunload", (event) => {
+    if (hasUnsavedLights()) event.preventDefault();
+  });
+  showView();
 
   refresh();
   setInterval(refresh, 2000);
