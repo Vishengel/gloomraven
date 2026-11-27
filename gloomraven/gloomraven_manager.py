@@ -1,5 +1,7 @@
 import logging
+import socket
 import sys
+import time
 from contextlib import nullcontext
 
 from gloomraven.config import BASECONFIG
@@ -15,6 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 class GloomravenManager:
+    # Back off while the X-Haven server is down, which can be for months between campaigns
+    MIN_RECONNECT_DELAY: float = 1.0  # Seconds
+    MAX_RECONNECT_DELAY: float = 60.0  # Seconds
+
     def __init__(
         self,
         gloomhaven_client: XHavenClient,
@@ -24,11 +30,36 @@ class GloomravenManager:
         self.smartlight_controller = SmartlightController(smartlight_client) if smartlight_client else None
 
     def run(self) -> None:
-        """Process game states until interrupted. The lights are restored however this exits."""
-        with (
-            self.smartlight_controller or nullcontext(),
-            self.gloomhaven_client.connect() as connection,
-        ):
+        """
+        Process game states until interrupted, reconnecting whenever the X-Haven server can't be reached.
+
+        The lights are restored however this exits.
+        """
+        with self.smartlight_controller or nullcontext():
+            reconnect_delay = self.MIN_RECONNECT_DELAY
+            while True:
+                try:
+                    connection = self.gloomhaven_client.connect()
+                except OSError as exc:
+                    logger.warning(
+                        "Could not connect to the X-Haven server at %s:%s: %s. Retrying in %s seconds",
+                        self.gloomhaven_client.server_ip,
+                        self.gloomhaven_client.server_port,
+                        exc,
+                        reconnect_delay,
+                    )
+                    time.sleep(reconnect_delay)
+                    reconnect_delay = min(reconnect_delay * 2, self.MAX_RECONNECT_DELAY)
+                    continue
+
+                reconnect_delay = self.MIN_RECONNECT_DELAY
+                try:
+                    self._process_game_states(connection)
+                except OSError as exc:
+                    logger.warning("Lost the connection to the X-Haven server: %s", exc)
+
+    def _process_game_states(self, connection: socket.socket) -> None:
+        with connection:
             while True:
                 if game_state := self.gloomhaven_client.receive_data(connection):
                     self.update(game_state)

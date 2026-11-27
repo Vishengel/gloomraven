@@ -1,6 +1,5 @@
 import logging
 import socket
-from _socket import gaierror
 
 from pydantic import BaseModel, Field
 
@@ -23,6 +22,7 @@ class XHavenClient:
     MESSAGE_END_BYTES = MESSAGE_END.encode()
     # Wake up from a blocking read this often, so Ctrl+C is handled promptly on Windows
     RECEIVE_TIMEOUT: float = 1.0  # Seconds
+    CONNECT_TIMEOUT: float = 5.0  # Seconds. Without it, connecting to an unreachable host blocks for minutes
 
     def __init__(self, server_ip: str, server_port: int):
         self.server_ip = server_ip
@@ -31,18 +31,12 @@ class XHavenClient:
         self._unprocessed_data = b""
 
     def connect(self) -> socket.socket:
-        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        try:
-            s.connect((self.server_ip, self.server_port))
-            s.settimeout(self.RECEIVE_TIMEOUT)
-            logger.info("Connected to server at %s:%s.", self.server_ip, self.server_port)
-            return s
-        except gaierror as exc:
-            logger.error("%s. Is the server ip %s correct?", exc, self.server_ip)
-            raise
-        except ConnectionRefusedError as exc:
-            logger.error("%s. Is the server port %s correct?", exc, self.server_port)
-            raise
+        """Connect to the server. Raises an `OSError` when it can't be reached."""
+        s = socket.create_connection((self.server_ip, self.server_port), timeout=self.CONNECT_TIMEOUT)
+        s.settimeout(self.RECEIVE_TIMEOUT)
+        self._unprocessed_data = b""  # Left over from a previous connection, can't be completed any more
+        logger.info("Connected to server at %s:%s.", self.server_ip, self.server_port)
+        return s
 
     def receive_data(self, s: socket.socket) -> GameState | None:
         data = self._unprocessed_data + self._receive_chunk(s)
