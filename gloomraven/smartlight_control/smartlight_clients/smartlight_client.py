@@ -1,8 +1,15 @@
 import logging
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Any
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True)
+class AvailableLight:
+    key: str  # What identifies the light in the light selection: the MAC address for WiZ, the name for Hue
+    description: str
 
 
 class SmartlightClient(ABC):
@@ -40,8 +47,13 @@ class SmartlightClient(ABC):
         ...
 
     @abstractmethod
-    def list_available_lights(self) -> list[str]:
-        """Return a description of every light found, including the identifier to put in the lights config."""
+    def list_available_lights(self) -> list[AvailableLight]:
+        """Return every light found, also the ones that aren't selected."""
+        ...
+
+    @abstractmethod
+    def select_lights(self, light_keys: list[str]) -> None:
+        """Control only the lights with these keys (see `AvailableLight.key`), or all lights when empty."""
         ...
 
     @abstractmethod

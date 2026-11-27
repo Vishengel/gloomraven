@@ -5,6 +5,7 @@ import sys
 
 from gloomraven.gloomhaven_app_clients.x_haven_client.x_haven_client import XHavenClient
 from gloomraven.gloomraven_manager import GloomravenManager
+from gloomraven.smartlight_control.light_selection_store import LightSelectionStore
 from gloomraven.smartlight_control.smartlight_clients.smartlight_types import (
     SupportedBrands,
     smartlight_class_factory,
@@ -52,8 +53,9 @@ if __name__ == "__main__":
     smartlight_client_class = smartlight_class_factory(args.sl_type)
     smartlight_client = smartlight_client_class(args.sl_ip) if args.sl_ip else smartlight_client_class()
     if args.list_lights:
-        print("\n".join(smartlight_client.list_available_lights()))
+        print("\n".join(f"{light.key} ({light.description})" for light in smartlight_client.list_available_lights()))
         sys.exit()
+    smartlight_client.select_lights(LightSelectionStore().load(args.sl_type))
 
     x_haven_client = XHavenClient(args.gl_ip, args.gl_port)
     gloomraven_manager = GloomravenManager(x_haven_client, smartlight_client)

@@ -3,8 +3,8 @@ from typing import Any
 
 from phue import Bridge, PhueException
 
-from gloomraven.smartlight_control.smartlight_clients.config import CONFIG
 from gloomraven.smartlight_control.smartlight_clients.smartlight_client import (
+    AvailableLight,
     SmartlightClient,
 )
 
@@ -32,10 +32,10 @@ def _get_state_params_to_restore(state: dict[str, Any]) -> dict[str, Any]:
 
 
 class PhilipsHueClient(SmartlightClient):
-    def __init__(self, bridge_ip: str, light_names: list[str] | None = None):
+    def __init__(self, bridge_ip: str):
         super().__init__()
         self.bridge_ip = bridge_ip
-        self.light_names = CONFIG.lights if light_names is None else light_names
+        self.light_names: list[str] = []
         self.bridge = Bridge(self.bridge_ip)
         self.bridge.connect()
 
@@ -76,8 +76,14 @@ class PhilipsHueClient(SmartlightClient):
             logger.warning("Configured Hue lights not found on the bridge: %s", sorted(missing_names))
         return [name_to_light[name].light_id for name in self.light_names if name in name_to_light]
 
-    def list_available_lights(self) -> list[str]:
-        return [f"{name} (id {light.light_id})" for name, light in self.bridge.get_light_objects("name").items()]
+    def select_lights(self, light_keys: list[str]) -> None:
+        self.light_names = light_keys
+
+    def list_available_lights(self) -> list[AvailableLight]:
+        return [
+            AvailableLight(key=name, description=f"id {light.light_id}")
+            for name, light in self.bridge.get_light_objects("name").items()
+        ]
 
     def change_color_by_light_ids(
         self, light_ids: list[int], color: dict[str, int], transition_speed: int | None = None

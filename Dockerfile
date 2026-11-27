@@ -20,7 +20,8 @@ RUN uv sync --locked --no-dev
 # phue keeps the Hue bridge username in $HOME/.python_hue, so HOME is the persistent data volume
 RUN useradd --system --home-dir /data --create-home gloomraven
 USER gloomraven
-ENV HOME=/data
+ENV HOME=/data \
+    LIGHT_SELECTION_PATH=/data/light_selection.json
 VOLUME /data
 
 ENTRYPOINT ["python", "-m", "gloomraven.main"]

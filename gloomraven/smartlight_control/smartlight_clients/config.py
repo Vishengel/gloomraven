@@ -1,6 +1,8 @@
+from pathlib import Path
+
 from pydantic import Field
 
-from gloomraven.config import BaseConfig
+from gloomraven.config import PROJECT_ROOT_PATH, BaseConfig
 from gloomraven.data_model.element_state import Element
 
 ELEMENT_COLOR_MAP = {
@@ -14,8 +16,10 @@ ELEMENT_COLOR_MAP = {
 
 
 class Config(BaseConfig):
-    # Lights to control: MAC addresses for WiZ, light names for Hue. Empty means all lights
+    # Lights to control: MAC addresses for WiZ, light names for Hue. Empty means all lights.
+    # Only used until a light selection is saved to light_selection_path
     lights: list[str] = Field(default_factory=list)
+    light_selection_path: Path = PROJECT_ROOT_PATH / "resources" / "light_selection.json"
     # Windows can send 255.255.255.255 out of the wrong network adapter (e.g. a Hyper-V switch).
     # Set this to your LAN's broadcast address, e.g. 192.168.178.255, if WiZ discovery finds no lights
     wiz_broadcast_address: str = "255.255.255.255"

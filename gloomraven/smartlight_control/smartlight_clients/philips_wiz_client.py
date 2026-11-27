@@ -8,6 +8,7 @@ from pywizlight.exceptions import WizLightError
 
 from gloomraven.smartlight_control.smartlight_clients.config import CONFIG
 from gloomraven.smartlight_control.smartlight_clients.smartlight_client import (
+    AvailableLight,
     SmartlightClient,
 )
 
@@ -38,9 +39,9 @@ def _get_pilot_params_to_restore(pilot: dict[str, Any]) -> dict[str, Any]:
 class PhilipsWizClient(SmartlightClient):
     id_to_light_mapping: dict[int, wizlight]
 
-    def __init__(self, light_macs: list[str] | None = None):
+    def __init__(self):
         super().__init__()
-        self.light_macs = [_normalise_mac(mac) for mac in (CONFIG.lights if light_macs is None else light_macs)]
+        self.light_macs: list[str] = []
         self._loop = None
         self._loop_thread = None
         self._start_event_loop_thread()
@@ -76,6 +77,10 @@ class PhilipsWizClient(SmartlightClient):
 
     async def _discover_lights_on_network(self):
         self.discovered_lights = await discovery.discover_lights(broadcast_space=CONFIG.wiz_broadcast_address)
+        self.id_to_light_mapping = dict(enumerate(self._select_configured_lights(self.discovered_lights)))
+
+    def select_lights(self, light_keys: list[str]) -> None:
+        self.light_macs = [_normalise_mac(mac) for mac in light_keys]
         self.id_to_light_mapping = dict(enumerate(self._select_configured_lights(self.discovered_lights)))
 
     def _get_light_states(self, light_ids: list[int]) -> dict[int, dict[str, Any]]:
@@ -125,8 +130,8 @@ class PhilipsWizClient(SmartlightClient):
     def get_all_light_ids(self) -> list[int]:
         return list(self.id_to_light_mapping.keys())
 
-    def list_available_lights(self) -> list[str]:
-        return [f"{light.mac} (ip {light.ip})" for light in self.discovered_lights]
+    def list_available_lights(self) -> list[AvailableLight]:
+        return [AvailableLight(key=light.mac, description=f"ip {light.ip}") for light in self.discovered_lights]
 
     def change_color_by_light_ids(
         self, light_ids: list[int], color: dict[str, int], transition_speed: int | None = None
