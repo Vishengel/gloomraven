@@ -1,4 +1,6 @@
 import argparse
+import logging
+import signal
 import sys
 
 from gloomraven.gloomhaven_app_clients.x_haven_client.x_haven_client import XHavenClient
@@ -40,6 +42,11 @@ def get_args():
     return parser.parse_args()
 
 
+def _exit_on_sigterm(signum: int, _) -> None:
+    # Unwind normally on SIGTERM (e.g. docker stop or systemd), so the lights are restored
+    sys.exit(128 + signum)
+
+
 if __name__ == "__main__":
     args = get_args()
     smartlight_client_class = smartlight_class_factory(args.sl_type)
@@ -50,4 +57,8 @@ if __name__ == "__main__":
 
     x_haven_client = XHavenClient(args.gl_ip, args.gl_port)
     gloomraven_manager = GloomravenManager(x_haven_client, smartlight_client)
-    gloomraven_manager.run()
+    signal.signal(signal.SIGTERM, _exit_on_sigterm)
+    try:
+        gloomraven_manager.run()
+    except KeyboardInterrupt:
+        logging.getLogger(__name__).info("Stopped by Ctrl+C")

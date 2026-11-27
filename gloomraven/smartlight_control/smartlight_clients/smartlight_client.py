@@ -1,23 +1,50 @@
+import logging
 from abc import ABC, abstractmethod
+from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class SmartlightClient(ABC):
+    """
+    Base class for a smartlight brand.
+
+    Subclasses only read and write the state of their own lights; saving and restoring that state is shared, so
+    every brand gets its lights back to how they were before the game.
+    """
+
+    def __init__(self):
+        self._saved_states: dict[int, Any] = {}
+
+    def save_states(self) -> None:
+        self._saved_states = self._get_light_states(self.get_all_light_ids())
+        logger.info("Saved the state of %s lights", len(self._saved_states))
+
+    def restore_states(self, transition_speed: int | None = None) -> None:
+        if not self._saved_states:
+            return
+        logger.info("Restoring the state of %s lights", len(self._saved_states))
+        self._set_light_states(self._saved_states, transition_speed)
+
     @abstractmethod
-    def reset_to_initial_state(self, transition_speed: int | None = None) -> None:
-        raise NotImplementedError
+    def _get_light_states(self, light_ids: list[int]) -> dict[int, Any]:
+        """Return the brand-specific state of each light, in a form `_set_light_states` can apply again."""
+        ...
+
+    @abstractmethod
+    def _set_light_states(self, light_states: dict[int, Any], transition_speed: int | None = None) -> None: ...
 
     @abstractmethod
     def get_all_light_ids(self) -> list[int]:
         """Return a list of all available light IDs for this client type."""
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     def list_available_lights(self) -> list[str]:
         """Return a description of every light found, including the identifier to put in the lights config."""
-        raise NotImplementedError
+        ...
 
     @abstractmethod
     def change_color_by_light_ids(
         self, light_ids: list[int], color: dict[str, int], transition_speed: int | None = None
-    ) -> None:
-        raise NotImplementedError
+    ) -> None: ...

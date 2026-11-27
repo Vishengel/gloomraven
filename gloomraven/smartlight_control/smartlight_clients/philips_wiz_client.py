@@ -15,14 +15,28 @@ logger = logging.getLogger(__name__)
 logging.getLogger("pywizlight").setLevel(logging.INFO)
 
 
+# Pilot fields that describe what a bulb shows and can be sent back as is. A bulb only reports the fields of its current
+# mode: sceneId (+ speed) for a scene, temp for white, r/g/b/c/w for a colour
+RESTORABLE_PILOT_FIELDS = ("dimming", "sceneId", "speed", "temp", "r", "g", "b", "c", "w")
+
+
 def _normalise_mac(mac: str) -> str:
     """WiZ bulbs report their MAC as lowercase hex without separators, e.g. a8bb50aabbcc."""
     return mac.lower().replace(":", "").replace("-", "")
 
 
+def _get_pilot_params_to_restore(pilot: dict[str, Any]) -> dict[str, Any]:
+    if not pilot.get("state"):
+        return {"state": False}
+    restorable_fields = {field: pilot[field] for field in RESTORABLE_PILOT_FIELDS if field in pilot}
+    if restorable_fields.get("sceneId") == 0:
+        # sceneId 0 means the bulb isn't showing a scene, and isn't a valid scene to set
+        del restorable_fields["sceneId"]
+    return {"state": True} | restorable_fields
+
+
 class PhilipsWizClient(SmartlightClient):
     id_to_light_mapping: dict[int, wizlight]
-    initial_states = dict[int, Any]
 
     def __init__(self, light_macs: list[str] | None = None):
         super().__init__()
@@ -32,11 +46,6 @@ class PhilipsWizClient(SmartlightClient):
         self._start_event_loop_thread()
         self._run_async_threadsafe(self._discover_lights_on_network())
         logger.info("Smartlight client of type %s initialized", self.__class__.__name__)
-
-    def reset_to_initial_state(self, transition_speed: int | None = None) -> None:
-        assert self.id_to_light_mapping.keys() == self.initial_states.keys()
-        for idx, state in self.initial_states.items():
-            self.change_color_by_light_ids(light_ids=[idx], color=state, transition_speed=transition_speed)
 
     def _start_event_loop_thread(self):
         """Start a dedicated thread with an event loop for async operations."""
@@ -68,17 +77,41 @@ class PhilipsWizClient(SmartlightClient):
     async def _discover_lights_on_network(self):
         self.discovered_lights = await discovery.discover_lights(broadcast_space=CONFIG.wiz_broadcast_address)
         self.id_to_light_mapping = dict(enumerate(self._select_configured_lights(self.discovered_lights)))
-        self.initial_states = {}
 
-        for idx, light in self.id_to_light_mapping.items():
+    def _get_light_states(self, light_ids: list[int]) -> dict[int, dict[str, Any]]:
+        async def get_states():
+            return await asyncio.gather(*(self._get_light_state_async(light_id) for light_id in light_ids))
+
+        states = self._run_async_threadsafe(get_states())
+        return {light_id: state for light_id, state in zip(light_ids, states, strict=True) if state is not None}
+
+    async def _get_light_state_async(self, light_id: int) -> dict[str, Any] | None:
+        light = self.id_to_light_mapping[light_id]
+        try:
             # Newer pywizlight versions return one state per bulb head; regular bulbs only have one
-            state = (await light.updateState())[0]
-            self.initial_states[idx] = {
-                "r": state.get_rgb()[0],
-                "g": state.get_rgb()[1],
-                "b": state.get_rgb()[2],
-                "bri": state.get_brightness(),
-            }
+            states = await light.updateState()
+        except WizLightError as exc:
+            logger.warning("Could not read the state of WiZ light at %s, it won't be restored: %s", light.ip, exc)
+            return None
+        if not states or states[0] is None:
+            logger.warning("WiZ light at %s returned no state, it won't be restored", light.ip)
+            return None
+        return dict(states[0].pilotResult)
+
+    def _set_light_states(self, light_states: dict[int, dict[str, Any]], transition_speed: int | None = None) -> None:
+        async def set_states():
+            await asyncio.gather(
+                *(self._set_light_state_async(light_id, pilot) for light_id, pilot in light_states.items())
+            )
+
+        self._run_async_threadsafe(set_states())
+
+    async def _set_light_state_async(self, light_id: int, pilot: dict[str, Any]) -> None:
+        light = self.id_to_light_mapping[light_id]
+        try:
+            await light.send({"method": "setPilot", "params": _get_pilot_params_to_restore(pilot)})
+        except WizLightError as exc:
+            logger.error("Failed to restore the state of WiZ light at %s: %s", light.ip, exc)
 
     def _select_configured_lights(self, lights: list[wizlight]) -> list[wizlight]:
         if not self.light_macs:

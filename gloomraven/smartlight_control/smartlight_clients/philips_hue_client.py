@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from phue import Bridge, PhueException
 
@@ -8,6 +9,16 @@ from gloomraven.smartlight_control.smartlight_clients.smartlight_client import (
 )
 
 logger = logging.getLogger(__name__)
+
+# The state fields that set the light's colour, for each colour mode the bridge reports
+COLOR_MODE_FIELDS = {"hs": ("hue", "sat"), "ct": ("ct",), "xy": ("xy",)}
+
+
+def _get_state_params_to_restore(state: dict[str, Any]) -> dict[str, Any]:
+    if not state.get("on"):
+        return {"on": False}
+    color_fields = COLOR_MODE_FIELDS.get(state.get("colormode", ""), ())
+    return {"on": True} | {field: state[field] for field in ("bri", *color_fields) if field in state}
 
 
 class PhilipsHueClient(SmartlightClient):
@@ -24,8 +35,21 @@ class PhilipsHueClient(SmartlightClient):
             self.bridge_ip,
         )
 
-    def reset_to_initial_state(self) -> None:
-        super().reset_to_initial_state()
+    def _get_light_states(self, light_ids: list[int]) -> dict[int, dict[str, Any]]:
+        try:
+            # One request for all lights; the bridge keys them by id as a string
+            all_lights = self.bridge.get_light()
+        except (PhueException, OSError) as exc:
+            logger.warning("Could not read the state of the Hue lights, they won't be restored: %s", exc)
+            return {}
+        return {light_id: all_lights[str(light_id)]["state"] for light_id in light_ids if str(light_id) in all_lights}
+
+    def _set_light_states(self, light_states: dict[int, dict[str, Any]], transition_speed: int | None = None) -> None:
+        for light_id, state in light_states.items():
+            try:
+                self.bridge.set_light(light_id, _get_state_params_to_restore(state))
+            except (PhueException, OSError) as exc:
+                logger.error("Failed to restore the state of Hue light %s: %s", light_id, exc)
 
     def get_all_light_ids(self) -> list[int]:
         """Get the IDs of the configured lights, or of all lights if none are configured."""

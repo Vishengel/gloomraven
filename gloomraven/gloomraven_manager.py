@@ -1,5 +1,6 @@
 import logging
 import sys
+from contextlib import nullcontext
 
 from gloomraven.config import BASECONFIG
 from gloomraven.data_model.game_state import GameState
@@ -21,22 +22,16 @@ class GloomravenManager:
     ):
         self.gloomhaven_client = gloomhaven_client
         self.smartlight_controller = SmartlightController(smartlight_client) if smartlight_client else None
-        self.running = False
 
     def run(self) -> None:
-        self.running = True
-        with self.gloomhaven_client.connect() as connection:
-            while self.running:
-                self._await_and_process_data(connection)
-
-    def _await_and_process_data(self, connection):
-        try:
-            game_state = self.gloomhaven_client.receive_data(connection)
-            if game_state:
-                self.update(game_state)
-        except KeyboardInterrupt:
-            logger.info("Terminating due to KeyboardInterrupt")
-            self.running = False
+        """Process game states until interrupted. The lights are restored however this exits."""
+        with (
+            self.smartlight_controller or nullcontext(),
+            self.gloomhaven_client.connect() as connection,
+        ):
+            while True:
+                if game_state := self.gloomhaven_client.receive_data(connection):
+                    self.update(game_state)
 
     def update(self, game_state: GameState):
         if self.smartlight_controller:

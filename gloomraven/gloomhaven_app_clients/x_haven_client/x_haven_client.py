@@ -20,16 +20,21 @@ class StateMessage(BaseModel):
 class XHavenClient:
     MESSAGE_START = "S3nD:"
     MESSAGE_END = "[EOM]"
+    MESSAGE_END_BYTES = MESSAGE_END.encode()
+    # Wake up from a blocking read this often, so Ctrl+C is handled promptly on Windows
+    RECEIVE_TIMEOUT: float = 1.0  # Seconds
 
     def __init__(self, server_ip: str, server_port: int):
         self.server_ip = server_ip
         self.server_port = server_port
-        self._unprocessed_data = ""
+        # Kept as bytes, so a multi-byte character split over two reads is decoded only once complete
+        self._unprocessed_data = b""
 
     def connect(self) -> socket.socket:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             s.connect((self.server_ip, self.server_port))
+            s.settimeout(self.RECEIVE_TIMEOUT)
             logger.info("Connected to server at %s:%s.", self.server_ip, self.server_port)
             return s
         except gaierror as exc:
@@ -40,15 +45,26 @@ class XHavenClient:
             raise
 
     def receive_data(self, s: socket.socket) -> GameState | None:
-        data = self._unprocessed_data + s.recv(CONFIG.socket_buffer_size).decode()
+        data = self._unprocessed_data + self._receive_chunk(s)
 
-        while self.MESSAGE_END not in data:
+        while self.MESSAGE_END_BYTES not in data:
             # If the EOM marker is not in the data, we haven't received the full message yet
-            data += s.recv(CONFIG.socket_buffer_size).decode()
+            data += self._receive_chunk(s)
 
         # Anything after the last end marker is the start of the next message
-        complete_data, _, self._unprocessed_data = data.rpartition(self.MESSAGE_END)
-        return self.process_server_message(complete_data)
+        complete_data, _, self._unprocessed_data = data.rpartition(self.MESSAGE_END_BYTES)
+        return self.process_server_message(complete_data.decode())
+
+    @staticmethod
+    def _receive_chunk(s: socket.socket) -> bytes:
+        while True:
+            try:
+                chunk = s.recv(CONFIG.socket_buffer_size)
+            except TimeoutError:
+                continue
+            if not chunk:
+                raise ConnectionError("The X-Haven server closed the connection")
+            return chunk
 
     def process_server_message(self, message: str) -> GameState | None:
         # One read can hold several messages
