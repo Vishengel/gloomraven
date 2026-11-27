@@ -130,8 +130,15 @@ class PhilipsWizClient(SmartlightClient):
     def get_all_light_ids(self) -> list[int]:
         return list(self.id_to_light_mapping.keys())
 
+    def rediscover_lights(self) -> None:
+        self._run_async_threadsafe(self._discover_lights_on_network())
+
     def list_available_lights(self) -> list[AvailableLight]:
-        return [AvailableLight(key=light.mac, description=f"ip {light.ip}") for light in self.discovered_lights]
+        selected_macs = {light.mac for light in self.id_to_light_mapping.values()}
+        return [
+            AvailableLight(key=light.mac, description=f"ip {light.ip}", selected=light.mac in selected_macs)
+            for light in self.discovered_lights
+        ]
 
     def change_color_by_light_ids(
         self, light_ids: list[int], color: dict[str, int], transition_speed: int | None = None

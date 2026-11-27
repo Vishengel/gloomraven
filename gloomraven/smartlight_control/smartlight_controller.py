@@ -1,5 +1,6 @@
 import logging
-from threading import Event, Thread
+from collections.abc import Callable
+from threading import Event, Lock, Thread
 from types import TracebackType
 from typing import Self
 
@@ -37,6 +38,8 @@ class SmartlightController:
         self.transition_interval = CONFIG.light_transition_interval
 
         self._force_transition_event = Event()
+        # Held while talking to the lights, so a change of lights from the web UI never interleaves with a color change
+        self._lights_lock = Lock()
         self._stop_event = Event()
         self._thread = Thread(target=self._light_update_loop, daemon=True)
 
@@ -55,6 +58,23 @@ class SmartlightController:
 
     def update(self, game_state: GameState):
         self._process_element_state(game_state.element_state)
+
+    def select_lights(self, light_keys: list[str]) -> None:
+        """Control other lights from now on. The lights that are dropped get their own state back."""
+        self._reconfigure_lights(lambda: self.smartlight_client.select_lights(light_keys))
+
+    def rediscover_lights(self) -> None:
+        self._reconfigure_lights(self.smartlight_client.rediscover_lights)
+
+    def _reconfigure_lights(self, reconfigure: Callable[[], None]) -> None:
+        with self._lights_lock:
+            self.smartlight_client.restore_states(transition_speed=self.transition_speed)
+            reconfigure()
+            self.light_ids = self.smartlight_client.get_all_light_ids()
+            self.smartlight_client.save_states()
+            if self.active_colors:
+                self._show_next_color(self.active_colors)
+        logger.info("Now controlling %s lights", len(self.light_ids))
 
     def _process_element_state(self, element_state: dict[Element, ElementLevel]):
         new_active_elements = {
@@ -98,7 +118,8 @@ class SmartlightController:
             active_colors = self.active_colors
             # Only send something when there is a cycle to show, or the set of colors has changed
             if len(active_colors) > 1 or active_colors != shown_colors:
-                self._show_next_color(active_colors)
+                with self._lights_lock:
+                    self._show_next_color(active_colors)
                 shown_colors = active_colors
 
             self._force_transition_event.wait(timeout=self.transition_interval)
@@ -121,4 +142,5 @@ class SmartlightController:
         self._force_transition_event.set()  # Wake the update thread so it stops right away
         if self._thread.is_alive():
             self._thread.join()
-        self.smartlight_client.restore_states(transition_speed=self.transition_speed)
+        with self._lights_lock:
+            self.smartlight_client.restore_states(transition_speed=self.transition_speed)

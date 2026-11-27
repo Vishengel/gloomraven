@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 class AvailableLight:
     key: str  # What identifies the light in the light selection: the MAC address for WiZ, the name for Hue
     description: str
+    selected: bool  # Whether the light is controlled
 
 
 class SmartlightClient(ABC):
@@ -54,6 +55,11 @@ class SmartlightClient(ABC):
     @abstractmethod
     def select_lights(self, light_keys: list[str]) -> None:
         """Control only the lights with these keys (see `AvailableLight.key`), or all lights when empty."""
+        ...
+
+    @abstractmethod
+    def rediscover_lights(self) -> None:
+        """Search for lights again, e.g. for one that was off at startup. Keeps the selection."""
         ...
 
     @abstractmethod

@@ -18,6 +18,14 @@
     .element { padding: 2px 10px; border-radius: 999px; font-size: 0.9rem; color: #111; }
     .element.HALF { opacity: 0.55; }
     .FIRE { background: #ff5a3c; } .ICE { background: #5aa8ff; } .AIR { background: #b8e4ff; }
+    #light-list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 2px; }
+    #light-list label { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+    #light-list input { width: 20px; height: 20px; accent-color: #8a5ad8; }
+    .buttons { display: flex; gap: 8px; }
+    button { flex: 1; padding: 10px; border: 0; border-radius: 8px; font: inherit; background: #8a5ad8; color: #fff; cursor: pointer; }
+    button.secondary { background: #3a3442; }
+    button:disabled { opacity: 0.4; cursor: default; }
+    #lights-message { margin-top: 8px; font-size: 0.9rem; }
     .EARTH { background: #6fcf6f; } .LIGHT { background: #ffe58a; } .DARK { background: #8a5ad8; color: #fff; }
   </style>
 </head>
@@ -39,6 +47,12 @@
   <section>
     <h2>Lights</h2>
     <div id="lights" class="muted">–</div>
+    <ul id="light-list"></ul>
+    <div class="buttons">
+      <button id="save-lights" disabled>Save</button>
+      <button id="rediscover-lights" class="secondary">Search again</button>
+    </div>
+    <div id="lights-message" class="muted"></div>
   </section>
 </main>
 <script>
@@ -74,8 +88,67 @@
     }
   }
 
+  let savedKeys = [];
+
+  const checkedKeys = () =>
+    [...byId("light-list").querySelectorAll("input:checked")].map((checkbox) => checkbox.value);
+
+  function updateSaveButton() {
+    const keys = checkedKeys();
+    const unchanged = keys.length === savedKeys.length && keys.every((key) => savedKeys.includes(key));
+    byId("save-lights").disabled = !keys.length || unchanged;
+    byId("lights-message").textContent = keys.length ? "" : "Pick at least one light";
+  }
+
+  function renderLights({ lights }) {
+    savedKeys = lights.filter((light) => light.selected).map((light) => light.key);
+    byId("light-list").replaceChildren(...lights.map((light) => {
+      const item = document.createElement("li");
+      const label = document.createElement("label");
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.value = light.key;
+      checkbox.checked = light.selected;
+      checkbox.addEventListener("change", updateSaveButton);
+      const description = document.createElement("span");
+      description.className = "muted";
+      description.textContent = `(${light.description})`;
+      label.append(checkbox, `${light.key} `, description);
+      item.append(label);
+      return item;
+    }));
+    updateSaveButton();
+  }
+
+  async function callLightsApi(method, path, body) {
+    const buttons = [byId("save-lights"), byId("rediscover-lights")];
+    buttons.forEach((button) => (button.disabled = true));
+    byId("lights-message").textContent = method === "GET" ? "" : "Working on it…";
+    try {
+      const response = await fetch(path, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: body && JSON.stringify(body),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(typeof result.detail === "string" ? result.detail : response.statusText);
+      renderLights(result);
+      if (method !== "GET") byId("lights-message").textContent = "Done";
+    } catch (error) {
+      byId("lights-message").textContent = `Failed: ${error.message}`;
+    } finally {
+      byId("rediscover-lights").disabled = false;
+    }
+  }
+
+  byId("save-lights").addEventListener("click", () =>
+    callLightsApi("PUT", "/api/lights", { light_keys: checkedKeys() }));
+  byId("rediscover-lights").addEventListener("click", () =>
+    callLightsApi("POST", "/api/lights/rediscover"));
+
   refresh();
   setInterval(refresh, 2000);
+  callLightsApi("GET", "/api/lights");
 </script>
 </body>
 </html>

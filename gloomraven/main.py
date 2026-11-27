@@ -56,11 +56,12 @@ if __name__ == "__main__":
     if args.list_lights:
         print("\n".join(f"{light.key} ({light.description})" for light in smartlight_client.list_available_lights()))
         sys.exit()
-    smartlight_client.select_lights(LightSelectionStore().load(args.sl_type))
+    light_selection_store = LightSelectionStore()
+    smartlight_client.select_lights(light_selection_store.load(args.sl_type))
 
     x_haven_client = XHavenClient(args.gl_ip, args.gl_port)
     gloomraven_manager = GloomravenManager(x_haven_client, smartlight_client)
-    start_web_server(gloomraven_manager)
+    start_web_server(gloomraven_manager, args.sl_type, light_selection_store)
     signal.signal(signal.SIGTERM, _exit_on_sigterm)
     try:
         gloomraven_manager.run()

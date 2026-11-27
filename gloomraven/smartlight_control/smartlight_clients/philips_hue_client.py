@@ -79,9 +79,16 @@ class PhilipsHueClient(SmartlightClient):
     def select_lights(self, light_keys: list[str]) -> None:
         self.light_names = light_keys
 
+    def rediscover_lights(self) -> None:
+        pass  # The bridge keeps track of its lights, and they're read from it every time
+
     def list_available_lights(self) -> list[AvailableLight]:
         return [
-            AvailableLight(key=name, description=f"id {light.light_id}")
+            AvailableLight(
+                key=name,
+                description=f"id {light.light_id}",
+                selected=not self.light_names or name in self.light_names,
+            )
             for name, light in self.bridge.get_light_objects("name").items()
         ]
 
