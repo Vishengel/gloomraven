@@ -1,5 +1,5 @@
 # Match project’s Python and line length preferences
-target-version = "py310"
+target-version = "py312"
 line-length = 120
 
 # Auto-fix what’s safe by default, and allow pyupgrade-style modernizations
@@ -18,9 +18,6 @@ exclude = [
   "build",
   "dist",
   "__pycache__",
-  # From .flake8
-  "ml_services/dev/models/yolov5/models/*",
-  "ml_services/dev/models/yolov5/utils/*",
 ]
 extend-exclude = [
   # From .flake8
@@ -71,7 +68,7 @@ convention = "pep257"
 # Match our isort profile=black and project layout
 combine-as-imports = true
 force-wrap-aliases = true
-known-first-party = ["ml_services"]
+known-first-party = ["gloomraven"]
 
 [lint.pyupgrade]
 # Mirror our old pyupgrade setup

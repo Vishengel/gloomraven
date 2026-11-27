@@ -1,20 +1,19 @@
-[tool.poetry]
+[project]
 name = "gloomraven"
 version = "0.1.0"
 description = ""
-authors = ["Jelle"]
+authors = [{ name = "Jelle" }]
 readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.10.4",
+    "pydantic-settings>=2.7.0",
+    "phue>=1.1",
+    "pywizlight>=0.6.3",
+]
 
-[tool.poetry.dependencies]
-python = "^3.11"
-pydantic = "^2.10.4"
-pre-commit = "^4.0.1"
-pylint = "^3.3.2"
-pydantic-settings = "^2.7.0"
-phue = "^1.1"
-pywizlight = "^0.6.3"
-
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0.1",
+    "pylint>=3.3.2",
+]
