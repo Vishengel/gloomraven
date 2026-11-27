@@ -5,51 +5,134 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Gloomraven</title>
   <style>
-    :root { color-scheme: dark; --bg: #16131a; --card: #221e28; --text: #ece6f2; --muted: #9a92a6; --ok: #6fcf8e; --bad: #e66a6a; --accent: #8a5ad8; }
-    body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 16px/1.4 system-ui, sans-serif; }
-    main { max-width: 480px; margin: 0 auto; display: grid; gap: 12px; }
-    h1 { margin: 0 0 4px; font-size: 1.4rem; }
-    section { background: var(--card); border-radius: 10px; padding: 12px 16px; }
-    h2 { margin: 0 0 6px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    :root {
+      color-scheme: dark;
+      --bg: #0e0c10;
+      --card: #19161c;
+      --card-edge: #3a2f24;
+      --text: #e9e1d3;
+      --muted: #9b9083;
+      --bronze: #c39a5b;
+      --bronze-dim: #7d6440;
+      --ok: #8fc98a;
+      --bad: #d9705f;
+      --glow: transparent;
+      --fire: #ff6a3d; --ice: #6fb7ff; --air: #c9e6f2; --earth: #7cc36b; --light: #ffd36b; --dark: #9b6be0;
+      --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 16px; min-height: 100vh; color: var(--text);
+      font: 16px/1.45 system-ui, sans-serif;
+      /* The room glows in the colour of the strongest active element */
+      background:
+        radial-gradient(ellipse 90% 45% at 50% 0%, color-mix(in srgb, var(--glow) 22%, transparent), transparent 70%),
+        radial-gradient(ellipse 120% 80% at 50% 50%, #17131a, var(--bg));
+      background-attachment: fixed;
+    }
+    body[data-element=FIRE] { --glow: var(--fire); } body[data-element=ICE] { --glow: var(--ice); }
+    body[data-element=AIR] { --glow: var(--air); } body[data-element=EARTH] { --glow: var(--earth); }
+    body[data-element=LIGHT] { --glow: var(--light); } body[data-element=DARK] { --glow: var(--dark); }
+    main { max-width: 480px; margin: 0 auto; display: grid; gap: 14px; }
+
+    header { display: flex; align-items: center; gap: 12px; padding: 4px 2px 0; }
+    header svg { width: 44px; height: 44px; flex: none; fill: #050406; stroke: var(--bronze-dim); stroke-width: 1; }
+    h1 { margin: 0; font: 600 1.7rem/1.1 var(--serif); letter-spacing: 0.04em; color: var(--bronze); }
+    .tagline { margin: 2px 0 0; font: italic 0.9rem var(--serif); color: var(--muted); }
+    .element-rule {
+      height: 2px; border-radius: 2px; opacity: 0.7;
+      background: linear-gradient(90deg, var(--fire), var(--light), var(--earth), var(--air), var(--ice), var(--dark));
+    }
+
+    section {
+      padding: 14px 16px; border-radius: 12px;
+      background: linear-gradient(180deg, #1d1920, var(--card));
+      border: 1px solid var(--card-edge);
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.03), 0 8px 24px rgb(0 0 0 / 0.35);
+    }
+    h2 {
+      margin: 0 0 8px; display: flex; align-items: center; gap: 8px;
+      font: 600 0.8rem var(--serif); text-transform: uppercase; letter-spacing: 0.14em; color: var(--bronze);
+    }
+    h2::after { content: ""; flex: 1; height: 1px; background: linear-gradient(90deg, var(--bronze-dim), transparent); }
+    h3 { margin: 14px 0 2px; font: 600 1.05rem var(--serif); color: var(--text); }
     .ok { color: var(--ok); }
     .bad { color: var(--bad); }
     .muted { color: var(--muted); }
-    #elements { display: flex; flex-wrap: wrap; gap: 6px; }
-    .element { padding: 2px 10px; border-radius: 999px; font-size: 0.9rem; color: #111; }
-    .element.HALF { opacity: 0.55; }
-    .FIRE { background: #ff5a3c; } .ICE { background: #5aa8ff; } .AIR { background: #b8e4ff; }
-    .EARTH { background: #6fcf6f; } .LIGHT { background: #ffe58a; } .DARK { background: var(--accent); color: #fff; }
-    #light-tree { margin: 8px 0 12px; }
-    h3 { margin: 12px 0 2px; font-size: 1rem; font-weight: 600; }
-    .line { display: flex; align-items: center; gap: 8px; }
-    .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
-    button.pulse { flex: none; padding: 4px 10px; font-size: 0.85rem; }
-    .row input[type=checkbox] { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
+    .detail { font-size: 0.85rem; }
+
+    .status-line { display: flex; align-items: center; gap: 8px; }
+    .status-line + .status-line { margin-top: 4px; }
+    .dot { width: 9px; height: 9px; flex: none; border-radius: 50%; background: var(--muted); }
+    .ok .dot { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
+    .bad .dot { background: var(--bad); }
+
+    /* Active elements as glowing runes; waning ones dashed and dimmer */
+    #elements { display: flex; flex-wrap: wrap; gap: 8px; }
+    .element {
+      --c: var(--muted);
+      padding: 4px 12px; border-radius: 999px; border: 1px solid var(--c);
+      font: 600 0.9rem var(--serif); letter-spacing: 0.06em; text-transform: capitalize;
+      color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent);
+      box-shadow: 0 0 12px color-mix(in srgb, var(--c) 45%, transparent);
+      animation: smoulder 3s ease-in-out infinite;
+    }
+    .element.HALF { border-style: dashed; opacity: 0.6; box-shadow: none; animation: none; }
+    .element.FIRE { --c: var(--fire); } .element.ICE { --c: var(--ice); } .element.AIR { --c: var(--air); }
+    .element.EARTH { --c: var(--earth); } .element.LIGHT { --c: var(--light); } .element.DARK { --c: var(--dark); }
+    @keyframes smoulder { 50% { box-shadow: 0 0 20px color-mix(in srgb, var(--c) 65%, transparent); } }
+    @media (prefers-reduced-motion: reduce) { .element { animation: none; } }
+
+    #light-tree { margin: 6px 0 14px; }
+    .line { display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgb(255 255 255 / 0.04); }
+    .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 7px 0; cursor: pointer; }
+    .row input[type=checkbox] { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--bronze); }
     .group-row { font-weight: 600; }
     .members { margin-left: 30px; }
-    .detail { font-size: 0.85rem; }
-    input[type=text] { flex: 1; min-width: 0; padding: 4px 8px; border: 1px solid #4a4354; border-radius: 6px; background: var(--bg); color: var(--text); font: inherit; }
+    input[type=text] {
+      flex: 1; min-width: 0; padding: 5px 8px; border: 1px solid var(--card-edge); border-radius: 6px;
+      background: var(--bg); color: var(--text); font: inherit;
+    }
+    input[type=text]:focus { outline: 2px solid var(--bronze-dim); outline-offset: 1px; }
+
     .buttons { display: flex; gap: 8px; }
     [hidden] { display: none !important; }
-    button { flex: 1; padding: 10px; border: 0; border-radius: 8px; font: inherit; background: var(--accent); color: #fff; cursor: pointer; }
-    button.secondary { background: #3a3442; }
+    button {
+      flex: 1; padding: 10px; border-radius: 8px; cursor: pointer;
+      font: 600 0.95rem var(--serif); letter-spacing: 0.04em;
+      border: 1px solid #d8b67a; color: #1a130b; background: linear-gradient(180deg, #d6b273, #a9824a);
+    }
+    button.secondary { border-color: var(--card-edge); color: var(--text); background: #241f27; }
+    button:hover:not(:disabled) { filter: brightness(1.12); }
+    button:focus-visible { outline: 2px solid var(--bronze); outline-offset: 2px; }
     button:disabled { opacity: 0.4; cursor: default; }
+    button.pulse { flex: none; padding: 4px 10px; font-size: 0.8rem; }
     #lights-message, #settings-message { margin-top: 8px; font-size: 0.9rem; }
+
     .setting { display: grid; gap: 4px; padding: 6px 0; }
     .setting-header { display: flex; justify-content: space-between; gap: 8px; }
-    .setting input[type=range] { width: 100%; accent-color: var(--accent); }
+    .setting output { font: 600 1rem var(--serif); color: var(--bronze); }
+    .setting input[type=range] { width: 100%; accent-color: var(--bronze); }
   </style>
 </head>
 <body>
 <main>
-  <h1>Gloomraven</h1>
+  <header>
+    <!-- An original low-poly raven -->
+    <svg viewBox="0 0 64 64" aria-hidden="true">
+      <path d="M3 27 17 21 23 13 33 10 41 15 43 24 56 33 62 46 50 42 43 50 31 51 22 43 19 33 15 29Z"/>
+      <circle cx="31" cy="17" r="1.8" fill="var(--bronze)" stroke="none"/>
+    </svg>
+    <div>
+      <h1>Gloomraven</h1>
+      <p class="tagline">The elements, in the lights of the room</p>
+    </div>
+  </header>
+  <div class="element-rule"></div>
   <section>
-    <h2>X-Haven server</h2>
-    <div id="connection" class="muted">Loading…</div>
-  </section>
-  <section>
-    <h2>Scenario</h2>
-    <div id="scenario" class="muted">–</div>
+    <h2>The table</h2>
+    <div id="connection" class="status-line muted"><span class="dot"></span><span>Loading…</span></div>
+    <div id="scenario" class="status-line muted">–</div>
   </section>
   <section>
     <h2>Active elements</h2>
@@ -89,9 +172,10 @@
   // Status
 
   function render(status) {
-    byId("connection").className = status.connected_to_x_haven ? "ok" : "bad";
-    byId("connection").textContent =
-      (status.connected_to_x_haven ? "Connected to " : "Not connected to ") + status.x_haven_address;
+    byId("connection").className = `status-line ${status.connected_to_x_haven ? "ok" : "bad"}`;
+    byId("connection").lastChild.textContent =
+      (status.connected_to_x_haven ? "Connected to X-Haven at " : "Not connected to X-Haven at ") +
+      status.x_haven_address;
 
     byId("scenario").textContent =
       status.scenario === null ? "No game state received yet" : `${status.scenario}, round ${status.round}`;
@@ -102,6 +186,8 @@
       textContent: `${name.toLowerCase()}${level === "HALF" ? " (waning)" : ""}`,
     })));
     if (!elements.length) byId("elements").textContent = "None";
+    const strongest = elements.find(([, level]) => level === "FULL") ?? elements[0];
+    document.body.dataset.element = strongest ? strongest[0] : "";
 
     byId("lights").textContent = `Controlling ${status.n_controlled_lights} lights`;
   }
@@ -111,8 +197,8 @@
       const response = await fetch("/api/status");
       render(await response.json());
     } catch {
-      byId("connection").className = "bad";
-      byId("connection").textContent = "Gloomraven is not reachable";
+      byId("connection").className = "status-line bad";
+      byId("connection").lastChild.textContent = "Gloomraven is not reachable";
     }
   }
 
