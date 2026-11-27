@@ -42,7 +42,9 @@ class PhilipsWizClient(SmartlightClient):
         self._loop_ready = threading.Event()
 
         def run_loop():
-            self._loop = asyncio.new_event_loop()
+            # The default Proactor loop on Windows sometimes never closes pywizlight's discovery socket, which hangs
+            # discovery forever. The selector loop doesn't have this problem and is the default on other platforms
+            self._loop = asyncio.SelectorEventLoop()
             asyncio.set_event_loop(self._loop)
             self._loop_ready.set()
             try:
@@ -63,17 +65,18 @@ class PhilipsWizClient(SmartlightClient):
         return future.result()
 
     async def _discover_lights_on_network(self):
-        self.discovered_lights = await discovery.discover_lights()
+        self.discovered_lights = await discovery.discover_lights(broadcast_space=CONFIG.wiz_broadcast_address)
         self.id_to_light_mapping = dict(enumerate(self._select_configured_lights(self.discovered_lights)))
         self.initial_states = {}
 
         for idx, light in self.id_to_light_mapping.items():
-            state = await light.updateState()
+            # Newer pywizlight versions return one state per bulb head; regular bulbs only have one
+            state = (await light.updateState())[0]
             self.initial_states[idx] = {
                 "r": state.get_rgb()[0],
                 "g": state.get_rgb()[1],
                 "b": state.get_rgb()[2],
-                "bri": light.state.get_brightness(),
+                "bri": state.get_brightness(),
             }
 
     def _select_configured_lights(self, lights: list[wizlight]) -> list[wizlight]:

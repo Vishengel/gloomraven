@@ -16,6 +16,9 @@ ELEMENT_COLOR_MAP = {
 class Config(BaseConfig):
     # Lights to control: MAC addresses for WiZ, light names for Hue. Empty means all lights
     lights: list[str] = Field(default_factory=list)
+    # Windows can send 255.255.255.255 out of the wrong network adapter (e.g. a Hyper-V switch).
+    # Set this to your LAN's broadcast address, e.g. 192.168.178.255, if WiZ discovery finds no lights
+    wiz_broadcast_address: str = "255.255.255.255"
 
     @property
     def element_color_map(self) -> dict[Element, dict[str, int]]:
