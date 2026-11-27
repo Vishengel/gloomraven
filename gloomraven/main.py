@@ -10,6 +10,7 @@ from gloomraven.smartlight_control.smartlight_clients.smartlight_types import (
     SupportedBrands,
     smartlight_class_factory,
 )
+from gloomraven.web.web_app import start_web_server
 
 
 def get_args():
@@ -59,6 +60,7 @@ if __name__ == "__main__":
 
     x_haven_client = XHavenClient(args.gl_ip, args.gl_port)
     gloomraven_manager = GloomravenManager(x_haven_client, smartlight_client)
+    start_web_server(gloomraven_manager)
     signal.signal(signal.SIGTERM, _exit_on_sigterm)
     try:
         gloomraven_manager.run()

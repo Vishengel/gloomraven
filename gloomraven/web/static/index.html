@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gloomraven</title>
+  <style>
+    :root { color-scheme: dark; --bg: #16131a; --card: #221e28; --text: #ece6f2; --muted: #9a92a6; --ok: #6fcf8e; --bad: #e66a6a; }
+    body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 16px/1.4 system-ui, sans-serif; }
+    main { max-width: 480px; margin: 0 auto; display: grid; gap: 12px; }
+    h1 { margin: 0 0 4px; font-size: 1.4rem; }
+    section { background: var(--card); border-radius: 10px; padding: 12px 16px; }
+    h2 { margin: 0 0 6px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+    .ok { color: var(--ok); }
+    .bad { color: var(--bad); }
+    .muted { color: var(--muted); }
+    #elements { display: flex; flex-wrap: wrap; gap: 6px; }
+    .element { padding: 2px 10px; border-radius: 999px; font-size: 0.9rem; color: #111; }
+    .element.HALF { opacity: 0.55; }
+    .FIRE { background: #ff5a3c; } .ICE { background: #5aa8ff; } .AIR { background: #b8e4ff; }
+    .EARTH { background: #6fcf6f; } .LIGHT { background: #ffe58a; } .DARK { background: #8a5ad8; color: #fff; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Gloomraven</h1>
+  <section>
+    <h2>X-Haven server</h2>
+    <div id="connection" class="muted">Loading…</div>
+  </section>
+  <section>
+    <h2>Scenario</h2>
+    <div id="scenario" class="muted">–</div>
+  </section>
+  <section>
+    <h2>Active elements</h2>
+    <div id="elements" class="muted">–</div>
+  </section>
+  <section>
+    <h2>Lights</h2>
+    <div id="lights" class="muted">–</div>
+  </section>
+</main>
+<script>
+  const byId = (id) => document.getElementById(id);
+
+  function render(status) {
+    byId("connection").className = status.connected_to_x_haven ? "ok" : "bad";
+    byId("connection").textContent =
+      (status.connected_to_x_haven ? "Connected to " : "Not connected to ") + status.x_haven_address;
+
+    byId("scenario").textContent =
+      status.scenario === null ? "No game state received yet" : `${status.scenario}, round ${status.round}`;
+
+    const elements = Object.entries(status.active_elements);
+    byId("elements").replaceChildren(...elements.map(([element, level]) => {
+      const chip = document.createElement("span");
+      chip.className = `element ${element} ${level}`;
+      chip.textContent = `${element.toLowerCase()}${level === "HALF" ? " (waning)" : ""}`;
+      return chip;
+    }));
+    if (!elements.length) byId("elements").textContent = "None";
+
+    byId("lights").textContent = `Controlling ${status.n_controlled_lights} lights`;
+  }
+
+  async function refresh() {
+    try {
+      const response = await fetch("/api/status");
+      render(await response.json());
+    } catch {
+      byId("connection").className = "bad";
+      byId("connection").textContent = "Gloomraven is not reachable";
+    }
+  }
+
+  refresh();
+  setInterval(refresh, 2000);
+</script>
+</body>
+</html>

@@ -10,6 +10,8 @@ dependencies = [
     "pydantic-settings>=2.7.0",
     "phue>=1.1",
     "pywizlight>=0.6.3",
+    "fastapi>=0.165.0",
+    "uvicorn>=0.54.0",
 ]
 
 [dependency-groups]

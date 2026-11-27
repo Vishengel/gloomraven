@@ -32,5 +32,6 @@ button just before the first start. The bridge login is kept in the `gloomraven-
 
 - The container uses the host network: WiZ discovery broadcasts on the LAN, which a bridge network can't reach.
   It also makes the X-Haven server reachable on `127.0.0.1:4567`.
+- The web UI is on `http://<pi ip>:4568`, from any PC or phone on the LAN. It has no login.
 - `docker compose stop` restores the lights to how they were before the game.
 - Updating: `git pull && docker compose up -d --build`.
