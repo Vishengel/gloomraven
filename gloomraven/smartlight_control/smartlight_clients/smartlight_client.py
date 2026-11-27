@@ -11,6 +11,8 @@ class AvailableLight:
     key: str  # What identifies the light in the light selection: the MAC address for WiZ, the name for Hue
     description: str
     selected: bool  # Whether the light is controlled
+    room: str | None = None  # Id of the room the light is in, when the brand knows it
+    group: str | None = None  # Id of the group within the room, unique across rooms. None when not in a group
 
 
 class SmartlightClient(ABC):

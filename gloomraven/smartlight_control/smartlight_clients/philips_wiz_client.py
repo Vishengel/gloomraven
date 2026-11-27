@@ -78,6 +78,26 @@ class PhilipsWizClient(SmartlightClient):
     async def _discover_lights_on_network(self):
         self.discovered_lights = await discovery.discover_lights(broadcast_space=CONFIG.wiz_broadcast_address)
         self.id_to_light_mapping = dict(enumerate(self._select_configured_lights(self.discovered_lights)))
+        rooms_and_groups = await asyncio.gather(
+            *(self._get_room_and_group_async(light) for light in self.discovered_lights)
+        )
+        self.room_and_group_by_mac = {
+            light.mac: room_and_group
+            for light, room_and_group in zip(self.discovered_lights, rooms_and_groups, strict=True)
+        }
+
+    @staticmethod
+    async def _get_room_and_group_async(light: wizlight) -> tuple[str | None, str | None]:
+        """Read the room and group the bulb was given in the WiZ app. Their names are only known to the WiZ cloud."""
+        try:
+            config = (await light.getBulbConfig())["result"]
+        except (WizLightError, KeyError) as exc:
+            logger.warning("Could not read the room of WiZ light at %s: %s", light.ip, exc)
+            return None, None
+        room = str(config["roomId"]) if config.get("roomId") else None
+        # groupId is numbered per room, and 0 means the bulb is in no group
+        group = f"{room}/{config['groupId']}" if room and config.get("groupId") else None
+        return room, group
 
     def select_lights(self, light_keys: list[str]) -> None:
         self.light_macs = [_normalise_mac(mac) for mac in light_keys]
@@ -136,7 +156,13 @@ class PhilipsWizClient(SmartlightClient):
     def list_available_lights(self) -> list[AvailableLight]:
         selected_macs = {light.mac for light in self.id_to_light_mapping.values()}
         return [
-            AvailableLight(key=light.mac, description=f"ip {light.ip}", selected=light.mac in selected_macs)
+            AvailableLight(
+                key=light.mac,
+                description=f"ip {light.ip}",
+                selected=light.mac in selected_macs,
+                room=self.room_and_group_by_mac[light.mac][0],
+                group=self.room_and_group_by_mac[light.mac][1],
+            )
             for light in self.discovered_lights
         ]
 

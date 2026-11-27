@@ -32,11 +32,16 @@ class Status(BaseModel):
 class Lights(BaseModel):
     brand: SupportedBrands
     lights: list[AvailableLight]
+    names: dict[str, str]  # See LightSelection.names_by_brand
 
 
 class LightSelectionRequest(BaseModel):
     # At least one: an empty selection means all lights, which is not what unchecking everything suggests
     light_keys: list[str] = Field(min_length=1)
+
+
+class NamesRequest(BaseModel):
+    names: dict[str, str]
 
 
 def _get_status(manager: GloomravenManager) -> Status:
@@ -70,7 +75,11 @@ def create_app(
     app = FastAPI(title="Gloomraven")
 
     def get_lights() -> Lights:
-        return Lights(brand=brand, lights=_get_controller(manager).smartlight_client.list_available_lights())
+        return Lights(
+            brand=brand,
+            lights=_get_controller(manager).smartlight_client.list_available_lights(),
+            names=light_selection_store.load_names(brand),
+        )
 
     @app.get("/")
     def get_index() -> FileResponse:
@@ -92,6 +101,11 @@ def create_app(
             raise HTTPException(status_code=422, detail=f"Unknown lights: {sorted(unknown_keys)}")
         light_selection_store.save(brand, request.light_keys)
         controller.select_lights(request.light_keys)
+        return get_lights()
+
+    @app.put("/api/lights/names")
+    def save_names(request: NamesRequest) -> Lights:
+        light_selection_store.save_names(brand, request.names)
         return get_lights()
 
     @app.post("/api/lights/rediscover")
