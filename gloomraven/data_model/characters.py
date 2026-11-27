@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any
 
 from gloomraven.data_model.base_schema import BaseSchema
 
@@ -11,10 +11,10 @@ class CharacterState(BaseSchema):
     xp: int
     chill: int
     display: str
-    summon_list: List[Any]
-    conditions: List[int]
-    conditions_added_this_turn: List[Any]
-    conditions_added_previous_turn: List[Any]
+    summon_list: list[Any]
+    conditions: list[int]
+    conditions_added_this_turn: list[Any]
+    conditions_added_previous_turn: list[Any]
 
 
 class Character(BaseSchema):
@@ -23,13 +23,13 @@ class Character(BaseSchema):
 
 
 class PlayerCharacter(Character):
-    character_state: Optional[CharacterState]
-    character_class: Optional[str]
+    character_state: CharacterState | None
+    character_class: str | None
 
 
 class MonsterCharacter(Character):
-    is_active: Optional[bool]
-    is_ally: Optional[bool]
-    level: Optional[int]
-    monster_instances: Optional[List[Any]]
-    type: Optional[str]
+    is_active: bool | None
+    is_ally: bool | None
+    level: int | None
+    monster_instances: list[Any] | None
+    type: str | None

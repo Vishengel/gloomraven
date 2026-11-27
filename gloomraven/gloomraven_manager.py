@@ -1,6 +1,5 @@
 import logging
 import sys
-from typing import Optional
 
 from gloomraven.config import BASECONFIG
 from gloomraven.data_model.game_state import GameState
@@ -18,12 +17,10 @@ class GloomravenManager:
     def __init__(
         self,
         gloomhaven_client: XHavenClient,
-        smartlight_client: Optional[SmartlightClient],
+        smartlight_client: SmartlightClient | None,
     ):
         self.gloomhaven_client = gloomhaven_client
-        self.smartlight_controller = (
-            SmartlightController(smartlight_client) if smartlight_client else None
-        )
+        self.smartlight_controller = SmartlightController(smartlight_client) if smartlight_client else None
         self.running = False
 
     def run(self) -> None:

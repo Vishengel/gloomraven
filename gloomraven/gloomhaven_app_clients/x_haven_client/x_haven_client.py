@@ -1,7 +1,5 @@
 import logging
 import socket
-from typing import Optional
-
 from _socket import gaierror
 
 from gloomraven.data_model.game_state import GameState
@@ -23,9 +21,7 @@ class XHavenClient:
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         try:
             s.connect((self.server_ip, self.server_port))
-            logger.info(
-                "Connected to server at %s:%s.", self.server_ip, self.server_port
-            )
+            logger.info("Connected to server at %s:%s.", self.server_ip, self.server_port)
             return s
         except gaierror as exc:
             logger.error("%s. Is the server ip %s correct?", exc, self.server_ip)
@@ -34,7 +30,7 @@ class XHavenClient:
             logger.error("%s. Is the server port %s correct?", exc, self.server_port)
             raise
 
-    def receive_data(self, s: socket.socket) -> Optional[GameState]:
+    def receive_data(self, s: socket.socket) -> GameState | None:
         data = s.recv(CONFIG.socket_buffer_size).decode()
 
         while self.MESSAGE_END not in data:
@@ -45,7 +41,7 @@ class XHavenClient:
             return self.process_server_message(data)
         return None
 
-    def process_server_message(self, message: str) -> Optional[GameState]:
+    def process_server_message(self, message: str) -> GameState | None:
         message = message.replace(self.MESSAGE_START, "").replace(self.MESSAGE_END, "")
         if self.GAME_STATE_START in message:
             logger.info("Received game state message from server")
@@ -60,10 +56,7 @@ class XHavenClient:
         message_split = message.split(self.GAME_STATE_START)
 
         if len(message_split) < 2:
-            raise ValueError(
-                f"'{self.GAME_STATE_START} should be part of the game state message. "
-                f"Message: {message}"
-            )
+            raise ValueError(f"'{self.GAME_STATE_START} should be part of the game state message. Message: {message}")
 
         game_state_string = message_split[1]
         game_state = GameState.model_validate_json(game_state_string)
