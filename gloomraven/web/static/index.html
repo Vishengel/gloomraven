@@ -21,7 +21,9 @@
     .EARTH { background: #6fcf6f; } .LIGHT { background: #ffe58a; } .DARK { background: var(--accent); color: #fff; }
     #light-tree { margin: 8px 0 12px; }
     h3 { margin: 12px 0 2px; font-size: 1rem; font-weight: 600; }
-    .row { display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+    .line { display: flex; align-items: center; gap: 8px; }
+    .row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; padding: 6px 0; cursor: pointer; }
+    button.pulse { flex: none; padding: 4px 10px; font-size: 0.85rem; }
     .row input[type=checkbox] { flex: none; width: 20px; height: 20px; margin: 0; accent-color: var(--accent); }
     .group-row { font-weight: 600; }
     .members { margin-left: 30px; }
@@ -138,7 +140,29 @@
     const checkbox = element("input", { type: "checkbox", checked: light.selected, dataset: { light: light.key } });
     checkbox.addEventListener("change", updateSelectionState);
     const detail = lights.names[light.key] ? `${light.key}, ${light.description}` : light.description;
-    return element("label", { className: "row" }, [checkbox, nameLabel(light.key, light.key, detail)]);
+    const label = element("label", { className: "row" }, [checkbox, nameLabel(light.key, light.key, detail)]);
+    return element("div", { className: "line" }, [label, pulseButton([light.key], lights.names[light.key] ?? light.key)]);
+  }
+
+  function pulseButton(lightKeys, name) {
+    const button = element("button", { className: "secondary pulse", textContent: "Pulse", ariaLabel: `Pulse ${name}` });
+    button.hidden = renaming;
+    button.addEventListener("click", async () => {
+      button.disabled = true;
+      try {
+        const response = await fetch("/api/lights/pulse", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ light_keys: lightKeys }),
+        });
+        if (!response.ok) throw new Error(response.statusText);
+      } catch (error) {
+        byId("lights-message").textContent = `Pulse failed: ${error.message}`;
+      } finally {
+        button.disabled = false;
+      }
+    });
+    return button;
   }
 
   function groupBlock(groupLights) {
@@ -150,8 +174,10 @@
       }
       updateSelectionState();
     });
-    const header = element("label", { className: "row group-row" }, [
-      checkbox, nameLabel(`group:${groupLights[0].group}`, `Group ${groupNumber}`),
+    const nameKey = `group:${groupLights[0].group}`;
+    const header = element("div", { className: "line" }, [
+      element("label", { className: "row group-row" }, [checkbox, nameLabel(nameKey, `Group ${groupNumber}`)]),
+      pulseButton(groupLights.map((light) => light.key), lights.names[nameKey] ?? `Group ${groupNumber}`),
     ]);
     return element("div", {}, [header, element("div", { className: "members" }, groupLights.map(lightRow))]);
   }

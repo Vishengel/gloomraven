@@ -60,6 +60,11 @@ class SmartlightClient(ABC):
         ...
 
     @abstractmethod
+    def pulse_lights(self, light_keys: list[str]) -> None:
+        """Briefly pulse these lights, selected or not, so you can see which is which. Restores them afterwards."""
+        ...
+
+    @abstractmethod
     def rediscover_lights(self) -> None:
         """Search for lights again, e.g. for one that was off at startup. Keeps the selection."""
         ...

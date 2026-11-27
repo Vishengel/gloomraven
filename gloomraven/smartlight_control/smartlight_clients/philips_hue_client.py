@@ -79,6 +79,15 @@ class PhilipsHueClient(SmartlightClient):
     def select_lights(self, light_keys: list[str]) -> None:
         self.light_names = light_keys
 
+    def pulse_lights(self, light_keys: list[str]) -> None:
+        try:
+            name_to_light = self.bridge.get_light_objects("name")
+            light_ids = [name_to_light[name].light_id for name in light_keys if name in name_to_light]
+            # One "breathe" cycle, after which the bridge puts the light back as it was
+            self.bridge.set_light(light_ids, {"alert": "select"})
+        except (PhueException, OSError) as exc:
+            logger.error("Failed to pulse Hue lights %s: %s", light_keys, exc)
+
     def rediscover_lights(self) -> None:
         pass  # The bridge keeps track of its lights, and they're read from it every time
 

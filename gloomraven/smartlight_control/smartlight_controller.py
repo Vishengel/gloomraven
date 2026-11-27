@@ -63,6 +63,10 @@ class SmartlightController:
         """Control other lights from now on. The lights that are dropped get their own state back."""
         self._reconfigure_lights(lambda: self.smartlight_client.select_lights(light_keys))
 
+    def pulse_lights(self, light_keys: list[str]) -> None:
+        with self._lights_lock:
+            self.smartlight_client.pulse_lights(light_keys)
+
     def rediscover_lights(self) -> None:
         self._reconfigure_lights(self.smartlight_client.rediscover_lights)
 

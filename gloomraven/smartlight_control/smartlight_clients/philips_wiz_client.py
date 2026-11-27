@@ -21,6 +21,13 @@ logging.getLogger("pywizlight").setLevel(logging.INFO)
 RESTORABLE_PILOT_FIELDS = ("dimming", "sceneId", "speed", "temp", "r", "g", "b", "c", "w")
 
 
+# Pulsing a light alternates bright and dim white. Dimming instead of switching off avoids the bulbs' slow fade-out
+PULSE_COUNT = 3
+PULSE_STEP_DURATION = 0.4  # Seconds
+PULSE_BRIGHT_PILOT = {"state": True, "r": 255, "g": 255, "b": 255, "dimming": 100}
+PULSE_DIM_PILOT = {"state": True, "r": 255, "g": 255, "b": 255, "dimming": 10}
+
+
 def _normalise_mac(mac: str) -> str:
     """WiZ bulbs report their MAC as lowercase hex without separators, e.g. a8bb50aabbcc."""
     return mac.lower().replace(":", "").replace("-", "")
@@ -99,19 +106,43 @@ class PhilipsWizClient(SmartlightClient):
         group = f"{room}/{config['groupId']}" if room and config.get("groupId") else None
         return room, group
 
+    def pulse_lights(self, light_keys: list[str]) -> None:
+        macs = {_normalise_mac(key) for key in light_keys}
+        lights = [light for light in self.discovered_lights if light.mac in macs]
+
+        async def pulse():
+            await asyncio.gather(*(self._pulse_light_async(light) for light in lights))
+
+        self._run_async_threadsafe(pulse())
+
+    async def _pulse_light_async(self, light: wizlight) -> None:
+        state = await self._get_light_state_async(light)
+        try:
+            for _ in range(PULSE_COUNT):
+                await light.send({"method": "setPilot", "params": PULSE_BRIGHT_PILOT})
+                await asyncio.sleep(PULSE_STEP_DURATION)
+                await light.send({"method": "setPilot", "params": PULSE_DIM_PILOT})
+                await asyncio.sleep(PULSE_STEP_DURATION)
+        except WizLightError as exc:
+            logger.error("Failed to pulse WiZ light at %s: %s", light.ip, exc)
+        if state is not None:
+            await self._set_light_state_async(light, state)
+
     def select_lights(self, light_keys: list[str]) -> None:
         self.light_macs = [_normalise_mac(mac) for mac in light_keys]
         self.id_to_light_mapping = dict(enumerate(self._select_configured_lights(self.discovered_lights)))
 
     def _get_light_states(self, light_ids: list[int]) -> dict[int, dict[str, Any]]:
         async def get_states():
-            return await asyncio.gather(*(self._get_light_state_async(light_id) for light_id in light_ids))
+            return await asyncio.gather(
+                *(self._get_light_state_async(self.id_to_light_mapping[light_id]) for light_id in light_ids)
+            )
 
         states = self._run_async_threadsafe(get_states())
         return {light_id: state for light_id, state in zip(light_ids, states, strict=True) if state is not None}
 
-    async def _get_light_state_async(self, light_id: int) -> dict[str, Any] | None:
-        light = self.id_to_light_mapping[light_id]
+    @staticmethod
+    async def _get_light_state_async(light: wizlight) -> dict[str, Any] | None:
         try:
             # Newer pywizlight versions return one state per bulb head; regular bulbs only have one
             states = await light.updateState()
@@ -126,13 +157,16 @@ class PhilipsWizClient(SmartlightClient):
     def _set_light_states(self, light_states: dict[int, dict[str, Any]], transition_speed: int | None = None) -> None:
         async def set_states():
             await asyncio.gather(
-                *(self._set_light_state_async(light_id, pilot) for light_id, pilot in light_states.items())
+                *(
+                    self._set_light_state_async(self.id_to_light_mapping[light_id], pilot)
+                    for light_id, pilot in light_states.items()
+                )
             )
 
         self._run_async_threadsafe(set_states())
 
-    async def _set_light_state_async(self, light_id: int, pilot: dict[str, Any]) -> None:
-        light = self.id_to_light_mapping[light_id]
+    @staticmethod
+    async def _set_light_state_async(light: wizlight, pilot: dict[str, Any]) -> None:
         try:
             await light.send({"method": "setPilot", "params": _get_pilot_params_to_restore(pilot)})
         except WizLightError as exc:

@@ -40,6 +40,10 @@ class LightSelectionRequest(BaseModel):
     light_keys: list[str] = Field(min_length=1)
 
 
+class PulseRequest(BaseModel):
+    light_keys: list[str] = Field(min_length=1)
+
+
 class NamesRequest(BaseModel):
     names: dict[str, str]
 
@@ -107,6 +111,10 @@ def create_app(
     def save_names(request: NamesRequest) -> Lights:
         light_selection_store.save_names(brand, request.names)
         return get_lights()
+
+    @app.post("/api/lights/pulse", status_code=204)
+    def pulse_lights(request: PulseRequest) -> None:
+        _get_controller(manager).pulse_lights(request.light_keys)
 
     @app.post("/api/lights/rediscover")
     def rediscover_lights() -> Lights:
