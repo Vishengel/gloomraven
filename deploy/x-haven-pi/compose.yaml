@@ -1,0 +1,9 @@
+services:
+  x-haven-server:
+    # Official headless X-Haven Assistant server (linux/amd64 + linux/arm64).
+    # Pin the version to match the X-Haven app version the players use.
+    image: ghcr.io/tarmslitaren/x-haven-server:1.14.4
+    container_name: x-haven-server
+    ports:
+      - "4567:4567"
+    restart: unless-stopped
