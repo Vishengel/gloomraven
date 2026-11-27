@@ -2,6 +2,7 @@ import logging
 
 from phue import Bridge
 
+from gloomraven.smartlight_control.smartlight_clients.config import CONFIG
 from gloomraven.smartlight_control.smartlight_clients.smartlight_client import (
     SmartlightClient,
 )
@@ -10,9 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class PhilipsHueClient(SmartlightClient):
-    def __init__(self, bridge_ip: str):
-        super().__init__(bridge_ip)
+    def __init__(self, bridge_ip: str, light_names: list[str] | None = None):
+        super().__init__()
         self.bridge_ip = bridge_ip
+        self.light_names = CONFIG.lights if light_names is None else light_names
         self.bridge = Bridge(self.bridge_ip)
         self.bridge.connect()
 
@@ -26,13 +28,22 @@ class PhilipsHueClient(SmartlightClient):
         super().reset_to_initial_state()
 
     def get_all_light_ids(self) -> list[int]:
-        """Get all available light IDs from the Philips Hue bridge."""
+        """Get the IDs of the configured lights, or of all lights if none are configured."""
         try:
-            lights = self.bridge.get_light_objects("id")
-            return list(lights.keys())
+            name_to_light = self.bridge.get_light_objects("name")
         except Exception as exc:
-            logger.error("Failed to get light IDs from Philips Hue bridge: %s", exc)
+            logger.error("Failed to get lights from Philips Hue bridge: %s", exc)
             return []
+
+        if not self.light_names:
+            return [light.light_id for light in name_to_light.values()]
+
+        if missing_names := set(self.light_names) - set(name_to_light):
+            logger.warning("Configured Hue lights not found on the bridge: %s", sorted(missing_names))
+        return [name_to_light[name].light_id for name in self.light_names if name in name_to_light]
+
+    def list_available_lights(self) -> list[str]:
+        return [f"{name} (id {light.light_id})" for name, light in self.bridge.get_light_objects("name").items()]
 
     def _set_light(self, light_ids: list[int], color: dict[str, int]):
         if "hue" in color:

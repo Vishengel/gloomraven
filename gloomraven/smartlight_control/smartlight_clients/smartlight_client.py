@@ -12,6 +12,11 @@ class SmartlightClient(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def list_available_lights(self) -> list[str]:
+        """Return a description of every light found, including the identifier to put in the lights config."""
+        raise NotImplementedError
+
+    @abstractmethod
     def change_color_by_light_ids(
         self, light_ids: list[int], color: dict[str, int], transition_speed: int | None = None
     ) -> None:

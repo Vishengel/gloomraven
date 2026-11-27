@@ -1,3 +1,5 @@
+from pydantic import Field
+
 from gloomraven.config import BaseConfig
 from gloomraven.data_model.element_state import Element
 
@@ -12,6 +14,9 @@ ELEMENT_COLOR_MAP = {
 
 
 class Config(BaseConfig):
+    # Lights to control: MAC addresses for WiZ, light names for Hue. Empty means all lights
+    lights: list[str] = Field(default_factory=list)
+
     @property
     def element_color_map(self) -> dict[Element, dict[str, int]]:
         return ELEMENT_COLOR_MAP

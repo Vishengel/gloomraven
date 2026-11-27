@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 from gloomraven.gloomhaven_app_clients.x_haven_client.x_haven_client import XHavenClient
 from gloomraven.gloomraven_manager import GloomravenManager
@@ -11,19 +12,25 @@ from gloomraven.smartlight_control.smartlight_clients.smartlight_types import (
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--gl_ip",
-        help="IP address of the Gloomhaven helper server",
-        type=str,
-        required=True,
+        "--list_lights",
+        help="Print the lights found for --sl_type, to fill in LIGHTS in .env, and exit",
+        action="store_true",
     )
-    parser.add_argument("--gl_port", help="Port of the Gloomhaven helper server", type=int, default=4567)
     parser.add_argument(
         "--sl_type",
         help="Type of smartlight",
         type=SupportedBrands,
         choices=[brand.value for brand in SupportedBrands],
     )
-    sl_ip_required = parser.parse_known_args()[0].sl_type == SupportedBrands.HUE
+    known_args = parser.parse_known_args()[0]
+    parser.add_argument(
+        "--gl_ip",
+        help="IP address of the Gloomhaven helper server",
+        type=str,
+        required=not known_args.list_lights,
+    )
+    parser.add_argument("--gl_port", help="Port of the Gloomhaven helper server", type=int, default=4567)
+    sl_ip_required = known_args.sl_type == SupportedBrands.HUE
     parser.add_argument(
         "--sl_ip",
         help="IP address of the smartlight bridge",
@@ -35,8 +42,12 @@ def get_args():
 
 if __name__ == "__main__":
     args = get_args()
-    x_haven_client = XHavenClient(args.gl_ip, args.gl_port)
     smartlight_client_class = smartlight_class_factory(args.sl_type)
     smartlight_client = smartlight_client_class(args.sl_ip) if args.sl_ip else smartlight_client_class()
+    if args.list_lights:
+        print("\n".join(smartlight_client.list_available_lights()))
+        sys.exit()
+
+    x_haven_client = XHavenClient(args.gl_ip, args.gl_port)
     gloomraven_manager = GloomravenManager(x_haven_client, smartlight_client)
     gloomraven_manager.run()

@@ -5,6 +5,7 @@ from typing import Any
 
 from pywizlight import PilotBuilder, discovery, wizlight
 
+from gloomraven.smartlight_control.smartlight_clients.config import CONFIG
 from gloomraven.smartlight_control.smartlight_clients.smartlight_client import (
     SmartlightClient,
 )
@@ -13,12 +14,18 @@ logger = logging.getLogger(__name__)
 logging.getLogger("pywizlight").setLevel(logging.INFO)
 
 
+def _normalise_mac(mac: str) -> str:
+    """WiZ bulbs report their MAC as lowercase hex without separators, e.g. a8bb50aabbcc."""
+    return mac.lower().replace(":", "").replace("-", "")
+
+
 class PhilipsWizClient(SmartlightClient):
     id_to_light_mapping: dict[int, wizlight]
     initial_states = dict[int, Any]
 
-    def __init__(self):
+    def __init__(self, light_macs: list[str] | None = None):
         super().__init__()
+        self.light_macs = [_normalise_mac(mac) for mac in (CONFIG.lights if light_macs is None else light_macs)]
         self._loop = None
         self._loop_thread = None
         self._start_event_loop_thread()
@@ -56,8 +63,8 @@ class PhilipsWizClient(SmartlightClient):
         return future.result()
 
     async def _discover_lights_on_network(self):
-        lights = await discovery.discover_lights()
-        self.id_to_light_mapping = dict(enumerate(lights))
+        self.discovered_lights = await discovery.discover_lights()
+        self.id_to_light_mapping = dict(enumerate(self._select_configured_lights(self.discovered_lights)))
         self.initial_states = {}
 
         for idx, light in self.id_to_light_mapping.items():
@@ -69,8 +76,20 @@ class PhilipsWizClient(SmartlightClient):
                 "bri": light.state.get_brightness(),
             }
 
+    def _select_configured_lights(self, lights: list[wizlight]) -> list[wizlight]:
+        if not self.light_macs:
+            return lights
+
+        mac_to_light = {_normalise_mac(light.mac): light for light in lights if light.mac}
+        if missing_macs := set(self.light_macs) - set(mac_to_light):
+            logger.warning("Configured WiZ lights not found on the network: %s", sorted(missing_macs))
+        return [mac_to_light[mac] for mac in self.light_macs if mac in mac_to_light]
+
     def get_all_light_ids(self) -> list[int]:
         return list(self.id_to_light_mapping.keys())
+
+    def list_available_lights(self) -> list[str]:
+        return [f"{light.mac} (ip {light.ip})" for light in self.discovered_lights]
 
     def change_color_by_light_ids(
         self, light_ids: list[int], color: dict[str, int], transition_speed: int | None = None
